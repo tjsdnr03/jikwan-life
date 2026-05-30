@@ -1,0 +1,40 @@
+You are building "직관생활" - a KBO baseball game attendance recording + Instagram card generator web app (PWA).
+
+## Key Context
+- Target users: Korean women aged 20-30 who are KBO baseball fans
+- Core flow: Record game → Generate pretty card → Share to Instagram story
+- Tech: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase
+- Mobile-first PWA design
+- Pastel color scheme (soft, feminine aesthetic)
+
+## Code Style
+- Always use TypeScript with strict types
+- Use functional components with React hooks
+- Use Tailwind CSS for styling (no CSS modules, minimal inline styles)
+- File names: kebab-case (e.g., pastel-card.tsx)
+- Component names: PascalCase (e.g., PastelCard)
+- Korean comments are acceptable
+- Always handle loading and error states
+- Use 'use client' directive only when needed (prefer Server Components)
+
+## Design Rules
+- Mobile-first: design for 375px width first
+- Rounded corners: use rounded-xl or rounded-2xl
+- Colors: use team pastel colors, not raw team colors
+- Font: use system font stack (Pretendard if available)
+- Card templates: always 9:16 ratio (1080x1920px for export)
+- No KBO logos, mascots, or emblems - only team color codes
+- Custom mascot character only (no team-specific animals)
+
+## Architecture
+- Refer to CLAUDE.md for full project structure and data models
+- Use Supabase client from lib/supabase.ts
+- API routes in app/api/ for server-side operations
+- Team data from lib/teams.ts (constants, no hardcoding)
+
+## When generating components:
+1. Always check CLAUDE.md for data types and team codes
+2. Use the TEAMS constant for colors, never hardcode team colors
+3. Handle both landscape and portrait photo orientations
+4. Card components must support dynamic team color theming
+5. All user-facing text in Korean

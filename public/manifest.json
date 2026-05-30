@@ -1,0 +1,10 @@
+{
+  "name": "직관생활",
+  "short_name": "직관생활",
+  "description": "KBO 직관 기록 & 인스타 카드 생성",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EBF2FD",
+  "theme_color": "#B8D4F8",
+  "icons": []
+}

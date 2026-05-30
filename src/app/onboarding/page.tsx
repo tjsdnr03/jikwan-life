@@ -1,0 +1,85 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { TEAM_LIST } from "@/lib/teams";
+import { cn } from "@/lib/utils";
+import type { TeamCode } from "@/types";
+
+/** 구단별 이모지 (마스코트/동물 이모지 사용 금지 — 파스텔 톤 UI용 장식) */
+const TEAM_EMOJI: Record<TeamCode, string> = {
+  lions: "💙",
+  twins: "❤️",
+  tigers: "🧡",
+  bears: "🌙",
+  eagles: "☀️",
+  giants: "🌊",
+  dinos: "💚",
+  wiz: "✨",
+  heroes: "💖",
+  landers: "🏟️",
+};
+
+/**
+ * 온보딩 (/onboarding) — 최초 1회
+ * 응원팀 선택(10개 구단 그리드) + 닉네임 설정 (Phase 1에서 구현)
+ */
+export default function OnboardingPage() {
+  const [selectedTeam, setSelectedTeam] = useState<TeamCode | null>(null);
+
+  const handleStart = () => {
+    if (!selectedTeam) return;
+    console.log("선택된 팀:", selectedTeam);
+  };
+
+  return (
+    <main className="flex flex-1 flex-col bg-[#EBF2FD] px-6 py-10">
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+        <header className="mb-8 text-center">
+          <h1 className="text-2xl font-bold leading-snug text-[#1A56DB]">
+            응원하는 팀을 선택해주세요!
+          </h1>
+        </header>
+
+        <div className="grid flex-1 grid-cols-2 gap-3">
+          {TEAM_LIST.map((team) => {
+            const isSelected = selectedTeam === team.code;
+
+            return (
+              <button
+                key={team.code}
+                type="button"
+                onClick={() => setSelectedTeam(team.code)}
+                className={cn(
+                  "flex flex-col items-center justify-center gap-2 rounded-2xl border-2 px-3 py-5 transition-all active:scale-[0.98]",
+                  isSelected
+                    ? "border-[#1A56DB] shadow-md ring-2 ring-[#1A56DB]/20"
+                    : "border-transparent shadow-sm"
+                )}
+                style={{ backgroundColor: team.pastelBg }}
+                aria-pressed={isSelected}
+                aria-label={`${team.name} 선택`}
+              >
+                <span className="text-3xl" aria-hidden>
+                  {TEAM_EMOJI[team.code]}
+                </span>
+                <span
+                  className="text-sm font-semibold"
+                  style={{ color: team.color }}
+                >
+                  {team.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 pb-4">
+          <Button disabled={!selectedTeam} onClick={handleStart}>
+            시작하기
+          </Button>
+        </div>
+      </div>
+    </main>
+  );
+}
