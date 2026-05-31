@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
@@ -31,6 +31,14 @@ export default function OnboardingPage() {
   const [selectedTeam, setSelectedTeam] = useState<TeamCode | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // 마운트 시 로그인 확인 — 세션 없으면 로그인으로
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) router.replace("/login");
+    });
+  }, [router]);
 
   const handleStart = async () => {
     if (!selectedTeam) return;

@@ -2,27 +2,23 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase";
 import { STADIUM_LIST } from "@/lib/stadiums";
-import { TEAM_LIST, TEAMS } from "@/lib/teams";
+import { TEAM_LIST, getTeam } from "@/lib/teams";
 import { cn, formatDate, getResult } from "@/lib/utils";
 import type { StadiumCode, TeamCode } from "@/types";
 
-const MY_TEAM_CODE: TeamCode = "lions";
-const MY_TEAM = TEAMS[MY_TEAM_CODE];
-
-/** 상대팀 선택 목록 (내 팀 제외) */
-const OPPONENT_LIST = TEAM_LIST.filter((team) => team.code !== MY_TEAM_CODE);
-
 /**
  * 직관 기록 작성 (/record/new)
- * 한 화면 스크롤 폼 — MVP: 로컬 저장 없이 console.log
+ * 한 화면 스크롤 폼 — records 테이블에 INSERT 후 /home 이동
  */
 export default function NewRecordPage() {
   const router = useRouter();
 
+  const [myTeamCode, setMyTeamCode] = useState<TeamCode | null>(null);
   const [gameDate, setGameDate] = useState(() => formatDate(new Date()));
   const [stadium, setStadium] = useState<StadiumCode | null>(null);
   const [opponentTeam, setOpponentTeam] = useState<TeamCode | "">("");
@@ -30,14 +26,65 @@ export default function NewRecordPage() {
   const [opponentScore, setOpponentScore] = useState("");
   const [isHome, setIsHome] = useState(true);
   const [comment, setComment] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = () => {
+  // 마운트 시 로그인 확인 + 내 팀 가져오기
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("my_team")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        router.replace("/onboarding");
+        return;
+      }
+
+      setMyTeamCode(profile.my_team as TeamCode);
+    }
+
+    load();
+  }, [router]);
+
+  const myTeam = myTeamCode ? getTeam(myTeamCode) : null;
+  // 상대팀 선택 목록 (내 팀 제외)
+  const opponentList = TEAM_LIST.filter((team) => team.code !== myTeamCode);
+
+  const handleSave = async () => {
+    if (!myTeamCode) return;
     if (!stadium) {
-      alert("구장을 선택해주세요.");
+      setError("구장을 선택해주세요.");
       return;
     }
     if (!opponentTeam) {
-      alert("상대팀을 선택해주세요.");
+      setError("상대팀을 선택해주세요.");
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      router.replace("/login");
       return;
     }
 
@@ -50,21 +97,26 @@ export default function NewRecordPage() {
         ? getResult(parsedMyScore, parsedOpponentScore)
         : null;
 
-    const recordData = {
+    const { error: insertError } = await supabase.from("records").insert({
+      user_id: user.id,
       game_date: gameDate,
       stadium,
-      my_team: MY_TEAM_CODE,
+      my_team: myTeamCode,
       opponent_team: opponentTeam,
       my_score: parsedMyScore,
       opponent_score: parsedOpponentScore,
       result,
       comment: comment.trim() || null,
       is_home: isHome,
-      photos: [] as string[],
-    };
+      photos: [],
+    });
 
-    console.log("직관 기록:", recordData);
-    alert("직관 기록이 저장되었습니다!");
+    if (insertError) {
+      setError("저장에 실패했어요. 잠시 후 다시 시도해주세요.");
+      setSaving(false);
+      return;
+    }
+
     router.push("/home");
   };
 
@@ -147,7 +199,7 @@ export default function NewRecordPage() {
                   내 팀
                 </p>
                 <div className="flex h-12 items-center rounded-xl bg-[#EBF2FD] px-4 text-base font-semibold text-[#1A56DB]">
-                  {MY_TEAM.name}
+                  {myTeam?.name ?? "..."}
                 </div>
               </div>
 
@@ -167,7 +219,7 @@ export default function NewRecordPage() {
                   className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
                 >
                   <option value="">상대팀을 선택하세요</option>
-                  {OPPONENT_LIST.map((team) => (
+                  {opponentList.map((team) => (
                     <option key={team.code} value={team.code}>
                       {team.name}
                     </option>
@@ -181,7 +233,7 @@ export default function NewRecordPage() {
                     htmlFor="my-score"
                     className="mb-2 block text-xs font-medium text-slate-500"
                   >
-                    {MY_TEAM.name} 점수
+                    {myTeam?.name ?? "내 팀"} 점수
                   </label>
                   <input
                     id="my-score"
@@ -277,8 +329,17 @@ export default function NewRecordPage() {
           </section>
 
           {/* 저장 */}
-          <Button variant="secondary" onClick={handleSave}>
-            기록 저장하기
+          {error ? (
+            <p className="text-center text-sm font-medium text-rose-500">
+              {error}
+            </p>
+          ) : null}
+          <Button
+            variant="secondary"
+            onClick={handleSave}
+            disabled={saving || !myTeamCode}
+          >
+            {saving ? "저장 중..." : "기록 저장하기"}
           </Button>
         </div>
       </div>

@@ -1,37 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
-import { cn } from "@/lib/utils";
-import type { GameResult } from "@/types";
+import { createClient } from "@/lib/supabase";
+import { getTeam } from "@/lib/teams";
+import { cn, formatDate, resultLabel } from "@/lib/utils";
+import type { GameResult, Record } from "@/types";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
-const mockRecords = [
-  { date: "2026-05-03", result: "win" as const },
-  { date: "2026-05-10", result: "loss" as const },
-  { date: "2026-05-15", result: "win" as const },
-  { date: "2026-05-17", result: "win" as const },
-  { date: "2026-05-22", result: "draw" as const },
-  { date: "2026-05-24", result: "win" as const },
-  { date: "2026-05-30", result: "win" as const },
-];
-
-/** 날짜별 기록 요약 (MVP 더미) */
-const RECORD_SUMMARIES: Record<string, string> = {
-  "2026-05-03": "라이온즈 4:2 트윈스 승리",
-  "2026-05-10": "라이온즈 2:5 베어스 패배",
-  "2026-05-15": "라이온즈 6:3 타이거즈 승리",
-  "2026-05-17": "라이온즈 3:1 이글스 승리",
-  "2026-05-22": "라이온즈 4:4 자이언츠 무승부",
-  "2026-05-24": "라이온즈 5:3 베어스 승리",
-  "2026-05-30": "라이온즈 5:3 베어스 승리",
-};
-
-const CURRENT_YEAR = 2026;
-const CURRENT_MONTH = 5; // 0-indexed: 4 = May, but we use 1-indexed display
-const TODAY = "2026-05-30";
+const TODAY = formatDate(new Date());
 
 function getDaysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
@@ -57,23 +37,78 @@ function resultDotColor(result: GameResult): string {
   }
 }
 
+/** 기록 한 건 → 캘린더 요약 문구 */
+function summarize(record: Record, myTeamName: string): string {
+  const opponent = getTeam(record.opponent_team).name;
+  const score =
+    record.my_score !== null && record.opponent_score !== null
+      ? ` ${record.my_score}:${record.opponent_score}`
+      : "";
+  const label = record.result ? ` ${resultLabel(record.result)}` : "";
+  return `${myTeamName}${score} ${opponent}${label}`.trim();
+}
+
 /**
  * 달력 뷰 (/calendar)
- * 월간 캘린더 + 직관 날짜 승/패 dot 표시
+ * 월간 캘린더 + 직관 날짜 승/패 dot 표시 — records 테이블 기반
  */
 export default function CalendarPage() {
+  const router = useRouter();
+  const now = new Date();
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth() + 1); // 1-indexed
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [records, setRecords] = useState<Record[]>([]);
+  const [myTeamName, setMyTeamName] = useState("");
 
+  useEffect(() => {
+    const supabase = createClient();
+
+    async function load() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.replace("/login");
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from("users")
+        .select("my_team")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (!profile) {
+        router.replace("/onboarding");
+        return;
+      }
+
+      setMyTeamName(getTeam(profile.my_team).name);
+
+      const { data: allRecords } = await supabase
+        .from("records")
+        .select("*")
+        .eq("user_id", user.id);
+
+      setRecords((allRecords ?? []) as Record[]);
+    }
+
+    load();
+  }, [router]);
+
+  // 날짜 → 기록 매핑
   const recordMap = useMemo(() => {
-    const map = new Map<string, GameResult>();
-    for (const record of mockRecords) {
-      map.set(record.date, record.result);
+    const map = new Map<string, Record>();
+    for (const record of records) {
+      map.set(record.game_date, record);
     }
     return map;
-  }, []);
+  }, [records]);
 
-  const daysInMonth = getDaysInMonth(CURRENT_YEAR, CURRENT_MONTH);
-  const firstDay = getFirstDayOfWeek(CURRENT_YEAR, CURRENT_MONTH);
+  const daysInMonth = getDaysInMonth(year, month);
+  const firstDay = getFirstDayOfWeek(year, month);
 
   const calendarCells: Array<number | null> = [
     ...Array.from({ length: firstDay }, () => null),
@@ -81,13 +116,31 @@ export default function CalendarPage() {
   ];
 
   const handleDateClick = (day: number) => {
-    const dateKey = `${CURRENT_YEAR}-${String(CURRENT_MONTH).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-    if (recordMap.has(dateKey)) {
-      setSelectedDate(dateKey);
+    const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    setSelectedDate(recordMap.has(dateKey) ? dateKey : null);
+  };
+
+  const goPrevMonth = () => {
+    setSelectedDate(null);
+    if (month === 1) {
+      setYear((y) => y - 1);
+      setMonth(12);
     } else {
-      setSelectedDate(null);
+      setMonth((m) => m - 1);
     }
   };
+
+  const goNextMonth = () => {
+    setSelectedDate(null);
+    if (month === 12) {
+      setYear((y) => y + 1);
+      setMonth(1);
+    } else {
+      setMonth((m) => m + 1);
+    }
+  };
+
+  const selectedRecord = selectedDate ? recordMap.get(selectedDate) : null;
 
   return (
     <>
@@ -97,17 +150,19 @@ export default function CalendarPage() {
           <header className="mb-6 flex items-center justify-between">
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400"
+              onClick={goPrevMonth}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-50"
               aria-label="이전 달"
             >
               <ChevronLeft size={22} />
             </button>
             <h1 className="text-xl font-bold text-slate-800">
-              {CURRENT_YEAR}년 {CURRENT_MONTH}월
+              {year}년 {month}월
             </h1>
             <button
               type="button"
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400"
+              onClick={goNextMonth}
+              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-50"
               aria-label="다음 달"
             >
               <ChevronRight size={22} />
@@ -137,8 +192,8 @@ export default function CalendarPage() {
                 return <div key={`empty-${index}`} className="aspect-square" />;
               }
 
-              const dateKey = `${CURRENT_YEAR}-${String(CURRENT_MONTH).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const result = recordMap.get(dateKey);
+              const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+              const record = recordMap.get(dateKey);
               const isToday = dateKey === TODAY;
               const isSelected = dateKey === selectedDate;
 
@@ -152,9 +207,9 @@ export default function CalendarPage() {
                     isToday && "border-2 border-[#1A56DB]",
                     isSelected && "bg-[#EBF2FD]",
                     !isSelected && !isToday && "hover:bg-slate-50",
-                    result ? "cursor-pointer" : "cursor-default"
+                    record ? "cursor-pointer" : "cursor-default"
                   )}
-                  aria-label={`${day}일${result ? `, ${result}` : ""}`}
+                  aria-label={`${day}일${record?.result ? `, ${record.result}` : ""}`}
                 >
                   <span
                     className={cn(
@@ -164,11 +219,11 @@ export default function CalendarPage() {
                   >
                     {day}
                   </span>
-                  {result ? (
+                  {record?.result ? (
                     <span
                       className={cn(
                         "mt-1 h-1.5 w-1.5 rounded-full",
-                        resultDotColor(result)
+                        resultDotColor(record.result)
                       )}
                     />
                   ) : (
@@ -181,13 +236,13 @@ export default function CalendarPage() {
 
           {/* 선택된 날짜 요약 */}
           <div className="mt-6 min-h-[72px] rounded-2xl bg-[#EBF2FD] p-4">
-            {selectedDate && RECORD_SUMMARIES[selectedDate] ? (
+            {selectedDate && selectedRecord ? (
               <p className="text-sm text-slate-700">
                 <span className="font-semibold text-[#1A56DB]">
                   {formatSelectedLabel(selectedDate)}
                 </span>
                 {" — "}
-                {RECORD_SUMMARIES[selectedDate]}
+                {summarize(selectedRecord, myTeamName)}
               </p>
             ) : (
               <p className="text-sm text-slate-400">
