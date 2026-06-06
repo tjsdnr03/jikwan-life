@@ -9,7 +9,7 @@ import { createClient } from "@/lib/supabase";
 import { STADIUM_LIST } from "@/lib/stadiums";
 import { TEAM_LIST, getTeam } from "@/lib/teams";
 import { cn, formatDate, getResult } from "@/lib/utils";
-import type { StadiumCode, TeamCode } from "@/types";
+import type { KBOGameResult, StadiumCode, TeamCode } from "@/types";
 
 /** 사진 업로드 제약 */
 const MAX_PHOTOS = 5;
@@ -34,6 +34,8 @@ export default function NewRecordPage() {
   const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [autoFetching, setAutoFetching] = useState(false);
+  const [autoFilled, setAutoFilled] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -78,6 +80,57 @@ export default function NewRecordPage() {
 
     load();
   }, [router]);
+
+  // 날짜+구장이 정해지면 /api/kbo 로 경기 결과 자동 조회 → 상대팀/스코어 자동 채움
+  useEffect(() => {
+    if (!myTeamCode || !stadium || !gameDate) return;
+
+    const controller = new AbortController();
+    let active = true;
+
+    const run = async () => {
+      setAutoFetching(true);
+      setAutoFilled(false);
+      try {
+        const res = await fetch(`/api/kbo?date=${gameDate}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+
+        const games = (await res.json()) as KBOGameResult[];
+        if (!active) return;
+
+        // 선택 구장 + 내 팀이 출전한 경기 매칭
+        const match = games.find(
+          (g) =>
+            g.stadium === stadium &&
+            (g.homeTeam === myTeamCode || g.awayTeam === myTeamCode)
+        );
+        if (!match) return;
+
+        const home = match.homeTeam === myTeamCode;
+        const mine = home ? match.homeScore : match.awayScore;
+        const opp = home ? match.awayScore : match.homeScore;
+
+        setOpponentTeam(home ? match.awayTeam : match.homeTeam);
+        setIsHome(home);
+        setMyScore(mine !== null ? String(mine) : "");
+        setOpponentScore(opp !== null ? String(opp) : "");
+        setAutoFilled(true);
+      } catch {
+        // 자동 채우기 실패는 수동 입력으로 대체 가능하므로 조용히 무시
+      } finally {
+        if (active) setAutoFetching(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [gameDate, stadium, myTeamCode]);
 
   const myTeam = myTeamCode ? getTeam(myTeamCode) : null;
   // 상대팀 선택 목록 (내 팀 제외)
@@ -267,9 +320,20 @@ export default function NewRecordPage() {
 
           {/* 경기 정보 */}
           <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold text-slate-700">
+            <h2 className="mb-3 text-sm font-semibold text-slate-700">
               경기 정보
             </h2>
+
+            {/* KBO 자동 조회 상태 */}
+            {autoFetching ? (
+              <p className="mb-4 rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
+                경기 정보 불러오는 중...
+              </p>
+            ) : autoFilled ? (
+              <p className="mb-4 rounded-xl bg-[#EBF2FD] px-3 py-2 text-xs font-medium text-[#1A56DB]">
+                경기 정보를 자동으로 가져왔습니다 ✅ (수정할 수 있어요)
+              </p>
+            ) : null}
 
             <div className="space-y-4">
               <div>

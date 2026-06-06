@@ -96,6 +96,16 @@ export interface InningScores {
   away: number[];
 }
 
+/** /api/kbo 응답 한 경기 (팀/구장은 우리 코드로 매핑된 값) */
+export interface KBOGameResult {
+  homeTeam: TeamCode;
+  awayTeam: TeamCode;
+  homeScore: number | null;
+  awayScore: number | null;
+  stadium: StadiumCode;
+  status: GameStatus;
+}
+
 /** 사용자 (users 테이블) */
 export interface User {
   id: string;
