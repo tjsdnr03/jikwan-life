@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, ImagePlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { STADIUM_LIST } from "@/lib/stadiums";
 import { TEAM_LIST, getTeam } from "@/lib/teams";
 import { cn, formatDate, getResult } from "@/lib/utils";
 import type { StadiumCode, TeamCode } from "@/types";
+
+/** 사진 업로드 제약 */
+const MAX_PHOTOS = 5;
+const MAX_PHOTO_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 /**
  * 직관 기록 작성 (/record/new)
@@ -26,8 +31,22 @@ export default function NewRecordPage() {
   const [opponentScore, setOpponentScore] = useState("");
   const [isHome, setIsHome] = useState(true);
   const [comment, setComment] = useState("");
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 선택한 사진의 미리보기 URL (파일 목록이 바뀔 때만 재생성)
+  const previewUrls = useMemo(
+    () => photoFiles.map((file) => URL.createObjectURL(file)),
+    [photoFiles]
+  );
+
+  // 미리보기 URL 정리 (메모리 누수 방지)
+  useEffect(() => {
+    return () => previewUrls.forEach((url) => URL.revokeObjectURL(url));
+  }, [previewUrls]);
 
   // 마운트 시 로그인 확인 + 내 팀 가져오기
   useEffect(() => {
@@ -64,6 +83,36 @@ export default function NewRecordPage() {
   // 상대팀 선택 목록 (내 팀 제외)
   const opponentList = TEAM_LIST.filter((team) => team.code !== myTeamCode);
 
+  // 파일 선택 → 검증(타입/용량) 후 최대 5장까지 누적
+  const handleSelectFiles = (e: ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files ?? []);
+    e.target.value = ""; // 같은 파일 재선택 허용
+    if (selected.length === 0) return;
+
+    const valid: File[] = [];
+    let rejected = false;
+    for (const file of selected) {
+      if (!ALLOWED_PHOTO_TYPES.includes(file.type)) {
+        setError("JPG, PNG, WebP 이미지만 올릴 수 있어요.");
+        rejected = true;
+        continue;
+      }
+      if (file.size > MAX_PHOTO_SIZE) {
+        setError("사진은 한 장당 5MB 이하만 가능해요.");
+        rejected = true;
+        continue;
+      }
+      valid.push(file);
+    }
+    if (!rejected) setError(null);
+
+    setPhotoFiles((prev) => [...prev, ...valid].slice(0, MAX_PHOTOS));
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    setPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSave = async () => {
     if (!myTeamCode) return;
     if (!stadium) {
@@ -97,6 +146,30 @@ export default function NewRecordPage() {
         ? getResult(parsedMyScore, parsedOpponentScore)
         : null;
 
+    // 사진 업로드 — record-photos/{userId}/{timestamp}_{filename}
+    const photoUrls: string[] = [];
+    for (let i = 0; i < photoFiles.length; i++) {
+      const file = photoFiles[i];
+      // 파일명 정규화 (한글/공백/특수문자 → _), 같은 ms 충돌 방지로 인덱스 포함
+      const safeName = file.name.normalize("NFC").replace(/[^\w.\-]+/g, "_");
+      const path = `${user.id}/${Date.now()}_${i}_${safeName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("record-photos")
+        .upload(path, file, { contentType: file.type, upsert: false });
+
+      if (uploadError) {
+        setError("사진 업로드에 실패했어요. 잠시 후 다시 시도해주세요.");
+        setSaving(false);
+        return;
+      }
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("record-photos").getPublicUrl(path);
+      photoUrls.push(publicUrl);
+    }
+
     const { data: inserted, error: insertError } = await supabase
       .from("records")
       .insert({
@@ -110,7 +183,7 @@ export default function NewRecordPage() {
         result,
         comment: comment.trim() || null,
         is_home: isHome,
-        photos: [],
+        photos: photoUrls,
       })
       .select("id")
       .single();
@@ -325,12 +398,58 @@ export default function NewRecordPage() {
             />
           </section>
 
-          {/* 사진 (준비중) */}
+          {/* 사진 (최대 5장) */}
           <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold text-slate-700">사진</h2>
-            <Button variant="secondary" disabled className="opacity-60">
-              사진 추가 (준비중)
-            </Button>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-slate-700">사진</h2>
+              <span className="text-xs text-slate-400">
+                {photoFiles.length}/{MAX_PHOTOS}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              {previewUrls.map((url, i) => (
+                <div
+                  key={url}
+                  className="relative aspect-square overflow-hidden rounded-xl bg-slate-100"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    alt={`직관 사진 ${i + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePhoto(i)}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white transition-colors hover:bg-black/70"
+                    aria-label={`사진 ${i + 1} 삭제`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+
+              {photoFiles.length < MAX_PHOTOS ? (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 transition-colors hover:border-[#1A56DB] hover:text-[#1A56DB]"
+                >
+                  <ImagePlus size={22} />
+                  <span className="text-xs font-medium">추가</span>
+                </button>
+              ) : null}
+            </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleSelectFiles}
+              className="hidden"
+            />
           </section>
 
           {/* 저장 */}
