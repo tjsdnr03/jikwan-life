@@ -16,6 +16,15 @@ interface OpponentStat {
   team: TeamCode;
   games: number;
   wins: number;
+  losses: number;
+}
+
+interface OpponentPerspectiveStat {
+  team: TeamCode;
+  games: number;
+  opponentWins: number;
+  opponentLosses: number;
+  opponentWinRate: number;
 }
 
 /**
@@ -130,14 +139,40 @@ export default function StatsPage() {
       team: r.opponent_team,
       games: 0,
       wins: 0,
+      losses: 0,
     };
     stat.games += 1;
     if (r.result === "win") stat.wins += 1;
+    if (r.result === "loss") stat.losses += 1;
     opponentMap.set(r.opponent_team, stat);
   }
   const opponents = Array.from(opponentMap.values()).sort(
     (a, b) => b.games - a.games
   );
+
+  // 상대팀 관점 승률 (내 패배 = 상대 승리)
+  const opponentPerspective: OpponentPerspectiveStat[] = opponents
+    .filter((o) => o.games >= 2 && o.wins + o.losses > 0)
+    .map((o) => {
+      const decided = o.wins + o.losses;
+      const opponentWinRate =
+        decided > 0 ? Math.round((o.losses / decided) * 100) : 0;
+      return {
+        team: o.team,
+        games: o.games,
+        opponentWins: o.losses,
+        opponentLosses: o.wins,
+        opponentWinRate,
+      };
+    })
+    .sort((a, b) => b.opponentWinRate - a.opponentWinRate);
+
+  const winFairy =
+    opponentPerspective.length > 0 ? opponentPerspective[0] : null;
+  const lossFairy =
+    opponentPerspective.length > 0
+      ? opponentPerspective[opponentPerspective.length - 1]
+      : null;
 
   return (
     <>
@@ -214,14 +249,14 @@ export default function StatsPage() {
           ) : null}
 
           {/* 상대팀별 전적 */}
-          <section className="rounded-2xl bg-white p-5 shadow-sm">
+          <section className="mb-6 rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="mb-4 text-sm font-semibold text-slate-700">
               상대팀별 전적
             </h2>
             <div className="space-y-4">
-              {opponents.map(({ team, games, wins }) => {
+              {opponents.map(({ team, games, wins, losses }) => {
                 const opponent = getTeam(team);
-                const rate = calcWinRatePercent(wins, games - wins);
+                const rate = calcWinRatePercent(wins, losses);
 
                 return (
                   <div key={team}>
@@ -230,7 +265,7 @@ export default function StatsPage() {
                         {opponent.name}
                       </span>
                       <span className="text-slate-500">
-                        {wins}승 {games - wins}패 · {rate}%
+                        {wins}승 {losses}패 · {rate}%
                       </span>
                     </div>
                     <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
@@ -246,6 +281,92 @@ export default function StatsPage() {
                 );
               })}
             </div>
+          </section>
+
+          {/* 상대팀 시점 통계 */}
+          <section className="rounded-2xl bg-white p-5 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-700">
+              혹시 나는 상대팀 승리요정? 🧚
+            </h2>
+            <p className="mt-1 text-xs text-slate-400">
+              내가 직관 갔을 때 상대팀의 승률이에요
+            </p>
+
+            {opponentPerspective.length > 0 && winFairy && lossFairy ? (
+              <div className="mt-4 space-y-2">
+                <p className="rounded-xl bg-[#EBF2FD] px-3 py-2 text-sm font-medium text-[#1A56DB]">
+                  당신은 {getTeam(winFairy.team).name}의 승리요정이에요! 😂
+                </p>
+                {winFairy.team !== lossFairy.team ? (
+                  <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                    당신은 {getTeam(lossFairy.team).name}의 패배요정이에요! 💪
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+
+            {opponentPerspective.length > 0 ? (
+              <div className="mt-4 space-y-4">
+                {opponentPerspective.map(
+                  ({
+                    team,
+                    opponentWins,
+                    opponentLosses,
+                    opponentWinRate,
+                  }) => {
+                    const opponent = getTeam(team);
+                    const isWinFairy = winFairy?.team === team;
+                    const isLossFairy =
+                      lossFairy?.team === team &&
+                      winFairy?.team !== lossFairy?.team;
+
+                    return (
+                      <div
+                        key={team}
+                        className={cn(
+                          "rounded-xl p-3",
+                          isWinFairy && "bg-[#EBF2FD]/60 ring-1 ring-[#1A56DB]/20",
+                          isLossFairy && "bg-emerald-50/80 ring-1 ring-emerald-200"
+                        )}
+                      >
+                        <div className="mb-1 flex items-center justify-between text-sm">
+                          <span className="font-medium text-slate-700">
+                            {opponent.name}
+                            {isWinFairy ? (
+                              <span className="ml-1 text-xs text-[#1A56DB]">
+                                승리요정
+                              </span>
+                            ) : null}
+                            {isLossFairy ? (
+                              <span className="ml-1 text-xs text-emerald-600">
+                                패배요정
+                              </span>
+                            ) : null}
+                          </span>
+                          <span className="text-slate-500">
+                            {opponentWins}승 {opponentLosses}패 ·{" "}
+                            {opponentWinRate}%
+                          </span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${opponentWinRate}%`,
+                              backgroundColor: opponent.pastel,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  }
+                )}
+              </div>
+            ) : (
+              <p className="mt-6 text-center text-sm text-slate-400">
+                더 많이 직관 가면 알 수 있어요! ⚾
+              </p>
+            )}
           </section>
         </div>
       </main>

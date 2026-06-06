@@ -51,3 +51,11 @@ export function winRate(wins: number, losses: number): number {
   if (total === 0) return 0;
   return wins / total;
 }
+
+/** record-photos public URL → Storage 객체 경로 (userId/filename) */
+export function getRecordPhotoStoragePath(publicUrl: string): string | null {
+  const marker = "/record-photos/";
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return null;
+  return decodeURIComponent(publicUrl.slice(idx + marker.length));
+}

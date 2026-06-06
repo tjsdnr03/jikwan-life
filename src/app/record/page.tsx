@@ -180,7 +180,7 @@ function RecordCard({ record }: { record: GameRecord }) {
   return (
     <li>
       <Link
-        href={`/card/${record.id}`}
+        href={`/record/${record.id}`}
         className="block rounded-2xl bg-white p-4 shadow-sm transition-colors active:bg-slate-50"
       >
         <div className="flex items-start justify-between gap-2">
