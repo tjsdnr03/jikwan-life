@@ -13,7 +13,7 @@ import type { StadiumCode, TeamCode } from "@/types";
 
 /**
  * 직관 기록 작성 (/record/new)
- * 한 화면 스크롤 폼 — records 테이블에 INSERT 후 /home 이동
+ * 한 화면 스크롤 폼 — records 테이블에 INSERT 후 /card/[id]로 이동
  */
 export default function NewRecordPage() {
   const router = useRouter();
@@ -97,27 +97,32 @@ export default function NewRecordPage() {
         ? getResult(parsedMyScore, parsedOpponentScore)
         : null;
 
-    const { error: insertError } = await supabase.from("records").insert({
-      user_id: user.id,
-      game_date: gameDate,
-      stadium,
-      my_team: myTeamCode,
-      opponent_team: opponentTeam,
-      my_score: parsedMyScore,
-      opponent_score: parsedOpponentScore,
-      result,
-      comment: comment.trim() || null,
-      is_home: isHome,
-      photos: [],
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("records")
+      .insert({
+        user_id: user.id,
+        game_date: gameDate,
+        stadium,
+        my_team: myTeamCode,
+        opponent_team: opponentTeam,
+        my_score: parsedMyScore,
+        opponent_score: parsedOpponentScore,
+        result,
+        comment: comment.trim() || null,
+        is_home: isHome,
+        photos: [],
+      })
+      .select("id")
+      .single();
 
-    if (insertError) {
+    if (insertError || !inserted) {
       setError("저장에 실패했어요. 잠시 후 다시 시도해주세요.");
       setSaving(false);
       return;
     }
 
-    router.push("/home");
+    // 저장 성공 → 방금 만든 기록의 카드 페이지로 이동
+    router.push(`/card/${inserted.id}`);
   };
 
   return (
