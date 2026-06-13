@@ -1,44 +1,133 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
+
+type Step = 1 | 2;
+
+const OTP_LENGTH = 8;
+
+function mapOtpError(message: string): string {
+  const lower = message.toLowerCase();
+  if (lower.includes("expired") || lower.includes("만료")) {
+    return "코드가 만료되었어요. 다시 받아주세요";
+  }
+  return "인증 코드가 올바르지 않아요. 다시 확인해주세요";
+}
 
 /**
  * 로그인 (/login)
- * Supabase Auth — 이메일 매직링크(OTP) 로그인
- * 이메일 입력 → 메일로 받은 링크 클릭 → /auth/callback 에서 자동 로그인
- * (비밀번호 불필요)
+ * Supabase Auth — 이메일 OTP 코드 로그인
  */
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const router = useRouter();
+  const codeInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [step, setStep] = useState<Step>(1);
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (step === 2) {
+      codeInputRef.current?.focus();
+    }
+  }, [step]);
+
+  const sendOtp = async (targetEmail: string) => {
+    const supabase = createClient();
+    return supabase.auth.signInWithOtp({ email: targetEmail });
+  };
+
+  const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || loading) return;
 
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        // 메일 링크 클릭 후 돌아올 콜백 주소 (배포 환경별 동적 설정)
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    const { error: otpError } = await sendOtp(email);
 
-    if (error) {
-      setError("링크 전송에 실패했어요. 이메일을 확인하고 다시 시도해주세요.");
+    if (otpError) {
+      setError("인증 코드 전송에 실패했어요. 이메일을 확인하고 다시 시도해주세요.");
       setLoading(false);
       return;
     }
 
-    setSent(true);
+    setCode("");
+    setStep(2);
     setLoading(false);
+  };
+
+  const handleResendCode = async () => {
+    if (!email || resendLoading) return;
+
+    setResendLoading(true);
+    setError(null);
+
+    const { error: otpError } = await sendOtp(email);
+
+    if (otpError) {
+      setError("코드 재전송에 실패했어요. 잠시 후 다시 시도해주세요.");
+    } else {
+      setCode("");
+      codeInputRef.current?.focus();
+    }
+
+    setResendLoading(false);
+  };
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email || code.length !== OTP_LENGTH || loading) return;
+
+    setLoading(true);
+    setError(null);
+
+    const supabase = createClient();
+    const { error: verifyError } = await supabase.auth.verifyOtp({
+      email,
+      token: code,
+      type: "email",
+    });
+
+    if (verifyError) {
+      setError(mapOtpError(verifyError.message));
+      setLoading(false);
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      setError("로그인에 실패했어요. 다시 시도해주세요.");
+      setLoading(false);
+      return;
+    }
+
+    const { data: profile } = await supabase
+      .from("users")
+      .select("id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    router.replace(profile ? "/home" : "/onboarding");
+  };
+
+  const handleBackToEmail = () => {
+    setStep(1);
+    setCode("");
+    setError(null);
+  };
+
+  const handleCodeChange = (value: string) => {
+    setCode(value.replace(/\D/g, "").slice(0, OTP_LENGTH));
+    if (error) setError(null);
   };
 
   return (
@@ -58,31 +147,8 @@ export default function LoginPage() {
           나만의 직관 기록을 남겨보세요
         </p>
 
-        {sent ? (
-          /* 전송 성공 안내 */
-          <div className="mt-10 w-full rounded-2xl bg-white p-6 shadow-sm">
-            <p className="text-base font-semibold leading-7 text-slate-700">
-              이메일을 확인해주세요!
-              <br />
-              로그인 링크를 보냈습니다 📧
-            </p>
-            <p className="mt-3 text-sm text-slate-400">
-              {email} 로 전송됨
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSent(false);
-                setEmail("");
-              }}
-              className="mt-4 text-sm font-medium text-[#1A56DB] underline"
-            >
-              다른 이메일로 다시 받기
-            </button>
-          </div>
-        ) : (
-          /* 이메일 입력 폼 */
-          <form onSubmit={handleSubmit} className="mt-10 w-full">
+        {step === 1 ? (
+          <form onSubmit={handleSendCode} className="mt-10 w-full">
             <input
               type="email"
               value={email}
@@ -98,12 +164,63 @@ export default function LoginPage() {
               disabled={loading || !email}
               className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-[#1A56DB] text-base font-semibold text-white shadow-md transition-colors hover:bg-[#1547b8] active:scale-[0.99] disabled:opacity-60"
             >
-              {loading ? "전송 중..." : "로그인 링크 받기"}
+              {loading ? "전송 중..." : "인증 코드 받기"}
             </button>
 
             {error ? (
               <p className="mt-4 text-sm font-medium text-rose-500">{error}</p>
             ) : null}
+          </form>
+        ) : (
+          <form onSubmit={handleVerify} className="mt-10 w-full">
+            <p className="mb-6 text-sm leading-relaxed text-slate-600">
+              <span className="font-semibold text-slate-800">{email}</span>
+              으로 인증 코드를 보냈어요
+            </p>
+
+            <input
+              ref={codeInputRef}
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => handleCodeChange(e.target.value)}
+              maxLength={OTP_LENGTH}
+              placeholder="········"
+              className="h-16 w-full rounded-2xl border border-slate-200 bg-white px-4 text-center text-3xl font-bold tracking-[0.3em] text-slate-800 outline-none transition-colors placeholder:text-slate-300 placeholder:tracking-[0.3em] focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+              aria-label="인증 코드"
+            />
+
+            <button
+              type="submit"
+              disabled={loading || code.length !== OTP_LENGTH}
+              className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-[#1A56DB] text-base font-semibold text-white shadow-md transition-colors hover:bg-[#1547b8] active:scale-[0.99] disabled:opacity-60"
+            >
+              {loading ? "확인 중..." : "로그인"}
+            </button>
+
+            {error ? (
+              <p className="mt-4 text-sm font-medium text-rose-500">{error}</p>
+            ) : null}
+
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={handleResendCode}
+                disabled={resendLoading || loading}
+                className="text-sm font-medium text-[#1A56DB] disabled:opacity-50"
+              >
+                {resendLoading ? "재전송 중..." : "코드 재전송"}
+              </button>
+              <button
+                type="button"
+                onClick={handleBackToEmail}
+                disabled={loading}
+                className="text-sm font-medium text-slate-500 underline-offset-2 hover:underline"
+              >
+                다른 이메일로 다시 받기
+              </button>
+            </div>
           </form>
         )}
 
