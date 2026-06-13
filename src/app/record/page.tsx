@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { TeamMascot } from "@/components/team/team-mascot";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
@@ -14,22 +15,7 @@ import type {
   GameResult,
   Record as GameRecord,
   StadiumCode,
-  TeamCode,
 } from "@/types";
-
-/** 구단별 이모지 (마스코트/동물 이모지 사용 금지) */
-const TEAM_EMOJI: Record<TeamCode, string> = {
-  lions: "💙",
-  twins: "❤️",
-  tigers: "🧡",
-  bears: "🌙",
-  eagles: "☀️",
-  giants: "🌊",
-  dinos: "💚",
-  wiz: "✨",
-  heroes: "💖",
-  landers: "🏟️",
-};
 
 /** 'YYYY-MM-DD' → '2026.06.07 토' */
 function formatRecordDate(isoDate: string): string {
@@ -195,13 +181,9 @@ function RecordCard({ record }: { record: GameRecord }) {
         </div>
 
         <div className="mt-3 flex items-center gap-2">
-          <span className="text-xl" aria-hidden>
-            {TEAM_EMOJI[myTeam.code]}
-          </span>
+          <TeamMascot team={myTeam} size="md" />
           <span className="text-sm font-medium text-slate-400">vs</span>
-          <span className="text-xl" aria-hidden>
-            {TEAM_EMOJI[opponentTeam.code]}
-          </span>
+          <TeamMascot team={opponentTeam} size="md" />
           {hasScore ? (
             <span className="ml-1 text-base font-bold text-slate-800">
               {record.my_score} : {record.opponent_score}

@@ -4,25 +4,12 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { TeamMascot } from "@/components/team/team-mascot";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { TEAM_LIST, getTeam } from "@/lib/teams";
 import { cn, winRate } from "@/lib/utils";
 import type { TeamCode } from "@/types";
-
-/** 구단별 이모지 (마스코트/동물 이모지 사용 금지) */
-const TEAM_EMOJI: Record<TeamCode, string> = {
-  lions: "💙",
-  twins: "❤️",
-  tigers: "🧡",
-  bears: "🌙",
-  eagles: "☀️",
-  giants: "🌊",
-  dinos: "💚",
-  wiz: "✨",
-  heroes: "💖",
-  landers: "🏟️",
-};
 
 interface Profile {
   email: string;
@@ -176,7 +163,7 @@ export default function MyPage() {
                     color: myTeam.color,
                   }}
                 >
-                  <span aria-hidden>{TEAM_EMOJI[myTeam.code]}</span>
+                  <TeamMascot team={myTeam} size="md" />
                   {myTeam.name}
                 </span>
               </div>
@@ -292,9 +279,7 @@ export default function MyPage() {
                     style={{ backgroundColor: team.pastelBg }}
                     aria-pressed={isSelected}
                   >
-                    <span className="text-2xl" aria-hidden>
-                      {TEAM_EMOJI[team.code]}
-                    </span>
+                    <TeamMascot team={team} size="xl" />
                     <span
                       className="text-xs font-semibold"
                       style={{ color: team.color }}

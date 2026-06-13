@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { ArrowLeft, Download, Share2 } from "lucide-react";
+import { TeamMascot } from "@/components/team/team-mascot";
 import { Button } from "@/components/ui/button";
 import { getTeam } from "@/lib/teams";
 import { cn, displayDate } from "@/lib/utils";
-import type { GameResult, TeamCode } from "@/types";
+import type { GameResult, Team, TeamCode } from "@/types";
 
 const mockRecord = {
   game_date: "2026-05-30",
@@ -20,20 +21,6 @@ const mockRecord = {
 };
 
 const mockStats = { totalGames: 18, winRate: 72, wins: 13 };
-
-/** 팀별 이모지 (마스코트/동물 이모지 사용 금지) */
-const TEAM_EMOJI: Record<TeamCode, string> = {
-  lions: "💙",
-  twins: "❤️",
-  tigers: "🧡",
-  bears: "🌙",
-  eagles: "☀️",
-  giants: "🌊",
-  dinos: "💚",
-  wiz: "✨",
-  heroes: "💖",
-  landers: "🏟️",
-};
 
 function ResultBadge({ result }: { result: GameResult }) {
   const label =
@@ -107,18 +94,14 @@ export default function CardPreviewPage() {
               <div className="mt-3 rounded-2xl bg-white p-3 shadow-sm">
                 <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
                   <ScoreTeam
-                    emoji={TEAM_EMOJI[myTeam.code]}
-                    name={myTeam.name}
+                    team={myTeam}
                     score={mockRecord.my_score}
-                    pastel={myTeam.pastel}
                     highlight
                   />
                   <span className="text-lg font-bold text-slate-300">VS</span>
                   <ScoreTeam
-                    emoji={TEAM_EMOJI[opponentTeam.code]}
-                    name={opponentTeam.name}
+                    team={opponentTeam}
                     score={mockRecord.opponent_score}
-                    pastel={opponentTeam.pastel}
                   />
                 </div>
                 <p className="mt-2 text-center text-[10px] text-slate-400">
@@ -170,33 +153,24 @@ export default function CardPreviewPage() {
 }
 
 function ScoreTeam({
-  emoji,
-  name,
+  team,
   score,
-  pastel,
   highlight = false,
 }: {
-  emoji: string;
-  name: string;
+  team: Team;
   score: number;
-  pastel: string;
   highlight?: boolean;
 }) {
   return (
     <div className="flex flex-col items-center text-center">
-      <span
-        className="mb-1 flex h-8 w-8 items-center justify-center rounded-full text-base"
-        style={{ backgroundColor: pastel }}
-      >
-        {emoji}
-      </span>
+      <TeamMascot team={team} size="md" className="mb-1" />
       <span
         className={cn(
           "text-[10px] font-semibold",
           highlight ? "text-slate-700" : "text-slate-500"
         )}
       >
-        {name}
+        {team.name}
       </span>
       <span
         className={cn(

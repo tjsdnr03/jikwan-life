@@ -45,6 +45,10 @@ export interface Team {
   pastel: string;
   /** 파스텔 배경 컬러 */
   pastelBg: string;
+  /** 자체 캐릭터 이미지 경로 (public/mascots) */
+  mascot: string;
+  /** 이미지 로드 실패 시 fallback 이모지 */
+  emoji: string;
 }
 
 /** 구장 정보 */

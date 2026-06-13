@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
 import { getTeam } from "@/lib/teams";
 import { displayDate, resultLabel, winRate } from "@/lib/utils";
@@ -86,15 +87,18 @@ export default function HomePage() {
     <>
       <main className="flex flex-1 flex-col bg-[#EBF2FD] px-6 pb-28 pt-8">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-          <header className="mb-8">
-            <h1 className="text-2xl font-bold text-slate-800">
-              {profile.nickname
-                ? `${profile.nickname}님, 안녕하세요!`
-                : "안녕하세요!"}
-            </h1>
-            <p className="mt-1 text-base text-slate-500">
-              {myTeam.name} 오늘도 승리하세요
-            </p>
+          <header className="mb-8 flex items-center gap-4">
+            <TeamMascot team={myTeam} size="xl" />
+            <div>
+              <h1 className="text-2xl font-bold text-slate-800">
+                {profile.nickname
+                  ? `${profile.nickname}님, 안녕하세요!`
+                  : "안녕하세요!"}
+              </h1>
+              <p className="mt-1 text-base text-slate-500">
+                {myTeam.name} 오늘도 승리하세요
+              </p>
+            </div>
           </header>
 
           <section className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
@@ -141,13 +145,18 @@ export default function HomePage() {
                       key={record.id}
                       className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm"
                     >
-                      <div>
+                      <div className="flex items-center gap-2">
+                        <TeamMascot team={myTeam} size="md" />
+                        <span className="text-xs text-slate-400">vs</span>
+                        <TeamMascot team={opponent} size="md" />
+                        <div>
                         <p className="text-sm font-semibold text-slate-800">
                           {myTeam.name} vs {opponent.name}
                         </p>
                         <p className="mt-0.5 text-xs text-slate-400">
                           {displayDate(record.game_date)}
                         </p>
+                        </div>
                       </div>
                       <div className="text-right">
                         {record.my_score !== null &&

@@ -4,7 +4,7 @@ import type { Team, TeamCode } from "@/types";
  * KBO 10개 구단 정보 매핑
  * - color: 구단 대표 컬러 (정보 표시용, 직접 노출 최소화)
  * - pastel / pastelBg: 카드/UI에 사용하는 파스텔 버전
- * ⚠️ 라이선스: 로고/마스코트/엠블럼 사용 금지, 색상만 활용
+ * - mascot: 자체 캐릭터 PNG (구단 로고/공식 마스코트 아님)
  */
 export const TEAMS: Record<TeamCode, Team> = {
   lions: {
@@ -14,6 +14,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#1A56DB",
     pastel: "#B8D4F8",
     pastelBg: "#EBF2FD",
+    mascot: "/mascots/lions.png",
+    emoji: "💙",
   },
   twins: {
     code: "twins",
@@ -22,6 +24,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#C62828",
     pastel: "#F4B8B8",
     pastelBg: "#FDE8E8",
+    mascot: "/mascots/twins.png",
+    emoji: "❤️",
   },
   tigers: {
     code: "tigers",
@@ -30,14 +34,18 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#E53935",
     pastel: "#F8C0B8",
     pastelBg: "#FDECEB",
+    mascot: "/mascots/tigers.png",
+    emoji: "🧡",
   },
   bears: {
     code: "bears",
     name: "베어스",
     short: "두산",
     color: "#1B1B3A",
-    pastel: "#B8B8D4",
+     pastel: "#B8B8D4",
     pastelBg: "#EBEBF5",
+    mascot: "/mascots/bears.png",
+    emoji: "🌙",
   },
   eagles: {
     code: "eagles",
@@ -46,6 +54,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#F57C00",
     pastel: "#F8D8B8",
     pastelBg: "#FDF0E0",
+    mascot: "/mascots/eagles.png",
+    emoji: "☀️",
   },
   giants: {
     code: "giants",
@@ -54,6 +64,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#1565C0",
     pastel: "#B8CCF4",
     pastelBg: "#E8F0FD",
+    mascot: "/mascots/giants.png",
+    emoji: "🌊",
   },
   dinos: {
     code: "dinos",
@@ -62,6 +74,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#00838F",
     pastel: "#B8E8EC",
     pastelBg: "#E0F5F7",
+    mascot: "/mascots/dinos.png",
+    emoji: "💚",
   },
   wiz: {
     code: "wiz",
@@ -70,6 +84,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#000000",
     pastel: "#C8C8C8",
     pastelBg: "#F0F0F0",
+    mascot: "/mascots/wiz.png",
+    emoji: "✨",
   },
   heroes: {
     code: "heroes",
@@ -78,6 +94,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#880E4F",
     pastel: "#E8B8D0",
     pastelBg: "#F8E8F0",
+    mascot: "/mascots/heroes.png",
+    emoji: "💖",
   },
   landers: {
     code: "landers",
@@ -86,6 +104,8 @@ export const TEAMS: Record<TeamCode, Team> = {
     color: "#C62828",
     pastel: "#F4B8B8",
     pastelBg: "#FDE8E8",
+    mascot: "/mascots/landers.png",
+    emoji: "🏟️",
   },
 };
 

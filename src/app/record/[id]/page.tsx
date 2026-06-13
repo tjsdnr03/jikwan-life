@@ -4,25 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { TeamMascot } from "@/components/team/team-mascot";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
 import { getRecordPhotoStoragePath } from "@/lib/utils";
-import type { GameResult, Record as GameRecord, StadiumCode, TeamCode } from "@/types";
-
-const TEAM_EMOJI: Record<TeamCode, string> = {
-  lions: "💙",
-  twins: "❤️",
-  tigers: "🧡",
-  bears: "🌙",
-  eagles: "☀️",
-  giants: "🌊",
-  dinos: "💚",
-  wiz: "✨",
-  heroes: "💖",
-  landers: "🏟️",
-};
+import type { GameResult, Record as GameRecord, StadiumCode } from "@/types";
 
 function formatRecordDate(isoDate: string): string {
   const date = new Date(isoDate);
@@ -216,7 +204,7 @@ export default function RecordDetailPage({
 
             <div className="mt-6 flex items-center justify-center gap-4">
               <div className="flex flex-col items-center">
-                <span className="text-2xl">{TEAM_EMOJI[myTeam.code]}</span>
+                <TeamMascot team={myTeam} size="xl" />
                 <span className="mt-1 text-sm font-semibold text-slate-700">
                   {myTeam.name}
                 </span>
@@ -228,7 +216,7 @@ export default function RecordDetailPage({
               </div>
               <span className="text-xl font-bold text-slate-300">:</span>
               <div className="flex flex-col items-center">
-                <span className="text-2xl">{TEAM_EMOJI[opponentTeam.code]}</span>
+                <TeamMascot team={opponentTeam} size="xl" />
                 <span className="mt-1 text-sm font-semibold text-slate-700">
                   {opponentTeam.name}
                 </span>

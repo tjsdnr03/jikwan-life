@@ -1,10 +1,12 @@
+import { TeamMascot } from "@/components/team/team-mascot";
 import { resultLabel } from "@/lib/utils";
+import type { Team } from "@/types";
 import type { CardProps } from "./types";
 
 /**
  * 파스텔 카드 템플릿 (MVP 기본)
  * - 인스타 스토리 비율 9:16 (1080x1920) — 미리보기는 aspect-[9/16]
- * - 내 팀 파스텔 컬러 적용 (구단 컬러 직접 노출 X, 로고/마스코트 X)
+ * - 내 팀 파스텔 컬러 적용
  * - html2canvas로 캡처할 수 있도록 순수 DOM/스타일로 구성
  */
 export function PastelCard({ data }: CardProps) {
@@ -44,18 +46,18 @@ export function PastelCard({ data }: CardProps) {
         />
       ) : (
         <div
-          className="mt-5 flex h-44 w-full items-center justify-center rounded-2xl text-5xl"
+          className="mt-5 flex h-44 w-full items-center justify-center rounded-2xl"
           style={{ backgroundColor: myTeam.pastel }}
         >
-          ⚾️
+          <TeamMascot team={myTeam} size="lg" unoptimized />
         </div>
       )}
 
       {/* 스코어보드 */}
       <div className="mt-6 flex items-center justify-center gap-4">
-        <TeamScore name={myTeam.short} score={myScore} highlight />
+        <TeamScore team={myTeam} score={myScore} highlight />
         <span className="text-2xl font-bold text-slate-400">:</span>
-        <TeamScore name={opponentTeam.short} score={opponentScore} />
+        <TeamScore team={opponentTeam} score={opponentScore} />
       </div>
 
       {/* 결과 뱃지 */}
@@ -92,22 +94,23 @@ export function PastelCard({ data }: CardProps) {
 
 /** 카드 내 팀별 점수 표시 */
 function TeamScore({
-  name,
+  team,
   score,
   highlight = false,
 }: {
-  name: string;
+  team: Team;
   score: number;
   highlight?: boolean;
 }) {
   return (
     <div className="flex flex-col items-center">
+      <TeamMascot team={team} size="lg" className="mb-1" unoptimized />
       <span
         className={`text-sm font-semibold ${
           highlight ? "text-slate-700" : "text-slate-400"
         }`}
       >
-        {name}
+        {team.short}
       </span>
       <span
         className={`text-5xl font-extrabold ${

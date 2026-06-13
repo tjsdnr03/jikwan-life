@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ImagePlus, X } from "lucide-react";
+import { TeamMascot } from "@/components/team/team-mascot";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { STADIUM_LIST } from "@/lib/stadiums";
@@ -340,7 +341,10 @@ export default function NewRecordPage() {
                 <p className="mb-2 text-xs font-medium text-slate-500">
                   내 팀
                 </p>
-                <div className="flex h-12 items-center rounded-xl bg-[#EBF2FD] px-4 text-base font-semibold text-[#1A56DB]">
+                <div className="flex h-12 items-center gap-3 rounded-xl bg-[#EBF2FD] px-4 text-base font-semibold text-[#1A56DB]">
+                  {myTeam ? (
+                    <TeamMascot team={myTeam} size="md" />
+                  ) : null}
                   {myTeam?.name ?? "..."}
                 </div>
               </div>

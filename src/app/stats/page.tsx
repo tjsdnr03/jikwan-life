@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
 import { getTeam } from "@/lib/teams";
 import { cn, winRate } from "@/lib/utils";
@@ -261,7 +262,8 @@ export default function StatsPage() {
                 return (
                   <div key={team}>
                     <div className="mb-1 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">
+                      <span className="flex items-center gap-2 font-medium text-slate-700">
+                        <TeamMascot team={opponent} size="md" />
                         {opponent.name}
                       </span>
                       <span className="text-slate-500">
@@ -330,7 +332,8 @@ export default function StatsPage() {
                         )}
                       >
                         <div className="mb-1 flex items-center justify-between text-sm">
-                          <span className="font-medium text-slate-700">
+                          <span className="flex items-center gap-2 font-medium text-slate-700">
+                            <TeamMascot team={opponent} size="md" />
                             {opponent.name}
                             {isWinFairy ? (
                               <span className="ml-1 text-xs text-[#1A56DB]">
