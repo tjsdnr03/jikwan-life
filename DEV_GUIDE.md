@@ -42,6 +42,12 @@ git add -A && git commit -m "feat: 기능설명" && git push
 ```
 → Vercel이 자동 재배포 (2~3분 후 반영)
 
+## 저장 & 배포 (매 작업 후)
+```bash
+git add -A && git commit -m "feat: 기능설명" && git push
+```
+→ Vercel이 자동 재배포 (2~3분 후 반영)
+
 ## 완료된 개발 단계
 - [x] Step 1: 프로젝트 세팅 (Next.js + Tailwind + Supabase)
 - [x] Step 2: Supabase 클라이언트 설정
@@ -50,29 +56,42 @@ git add -A && git commit -m "feat: 기능설명" && git push
 - [x] Step 5: 온보딩 (팀 선택)
 - [x] Step 6: 홈 화면
 - [x] Step 7: 직관 기록 작성 + 사진 업로드
-- [x] Step 8: 이메일 로그인 + Gmail SMTP
-- [x] Step 9: 카드 생성 + 이미지 저장
-- [x] Step 10: 승률 통계
-- [x] Step 11: 달력 뷰
+- [x] Step 8: 이메일 로그인 (매직링크 → OTP 코드로 변경) + Gmail SMTP
+- [x] Step 9: 카드 생성 + 이미지 저장 (html2canvas-pro)
+- [x] Step 10: 승률 통계 (승리요정 포함)
+- [x] Step 11: 달력 뷰 (KBO 일정 오버레이)
 - [x] Step 12: DB 연동 (전체 플로우)
 - [x] Step 13: Vercel 배포
+- [x] Step 14: KBO 데이터 연동 (네이버 스포츠 API, 자동 매칭 + kbo_games 캐싱)
+- [x] Step 15: 기록 목록/상세/수정/삭제
+- [x] Step 16: 팀 캐릭터 이미지 (AI 생성 고양이 10팀, rembg 배경제거)
+- [x] Step 17: 마이페이지 (프로필, 팀 변경, 로그아웃)
+- [x] Step 18: PWA 설정
 
-## 다음 개발 단계
-- [ ] Step 14: KBO 데이터 크롤러
-- [ ] Step 15: 카드 템플릿 추가 (클래식/볼드)
-- [ ] Step 16: 카카오 로그인 (비즈앱 전환 후)
-- [ ] Step 17: PWA 설정
-- [ ] Step 18: 디자인 폴리싱
+## 다음 개발 단계 (우선순위순)
+- [ ] Step 19: 인스타 카드 디자인 개선 (사진 크롭/위치, 가로/세로 대응)
+- [ ] Step 20: 카드 템플릿 추가 (클래식/볼드)
+- [ ] Step 21: 전체 UI 폴리싱 (여백/폰트/디자인 통일성)
+- [ ] Step 22: 캐릭터 이미지 스타일 통일
+- [ ] Step 23: 카카오 로그인 (사업자등록 → 비즈앱 전환 후)
+- [ ] Step 24: 집관 기록 기능
+- [ ] Step 25: 닉네임 설정/수정
+- [ ] Step 26: 오프라인 캐싱 (서비스 워커)
+- [ ] Step 27: 구장 먹거리 가이드
+- [ ] Step 28: 소셜 기능 (친구, 승률 비교)
+- [ ] Step 29: 숏폼 영상 생성
+- [ ] Step 30: 유꾸마켓 앱 내 연동
 
 ## Supabase 설정 정보
 - Project URL: https://mdwedauwltxphhdbesee.supabase.co
-- Auth: Email provider (매직링크)
-- SMTP: Gmail (smtp.gmail.com:465)
-- Storage: record-photos 버킷 (public)
+- Auth: Email provider (OTP 코드, 매직링크 아님)
+- SMTP: Gmail (smtp.gmail.com:465, tjsdnr03@gmail.com)
+- Storage: record-photos 버킷 (public, 5MB)
 - DB 테이블: users, records, kbo_games
 - RLS: 활성화 (본인 데이터만 접근)
 
 ## 알려진 제약사항
-- html2canvas 대신 html2canvas-pro 사용 필수 (Tailwind v4 oklch 호환)
+- html2canvas 대신 html2canvas-pro 사용 필수 (Tailwind v4 oklch 호환) — 절대 되돌리지 말 것
 - Supabase 무료 플랜: 이메일 시간당 3-4개 → Gmail SMTP로 해결
-- 카카오 로그인: account_email 권한 필요 → 비즈앱 전환 필요
+- 카카오 로그인: account_email 권한 필요 → 사업자등록 후 비즈앱 전환 필요
+- KBO 라이선스: 구단 로고/마스코트/엠블럼/선수명 사용 금지 → 자체 고양이 캐릭터 + 색상만 활용

@@ -7,6 +7,7 @@ import type {
   GameStatus,
   KBOGame,
   KBOGameResult,
+  KBOScheduleGame,
   StadiumCode,
   TeamCode,
 } from "@/types";
@@ -14,20 +15,66 @@ import type {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** 캐시된 경기가 확정값(종료/취소)인지 */
+function isFinal(g: KBOGame): boolean {
+  return g.status === "finished" || g.status === "cancelled";
+}
+
 /**
- * KBO 경기 결과 API (/api/kbo?date=YYYY-MM-DD)
+ * KBO 경기 API
+ *   - /api/kbo?date=YYYY-MM-DD  → 해당 날짜 경기 결과 (KBOGameResult[])
+ *   - /api/kbo?month=YYYY-MM    → 해당 월 전체 일정 (KBOScheduleGame[], date 포함)
  *
- * 동작:
- *   1. kbo_games 캐시에 해당 날짜 데이터가 있으면 그대로 반환
- *   2. 없으면 네이버 스포츠 스케줄 API(JSON)에서 가져와 파싱·매핑
+ * 공통 동작:
+ *   1. kbo_games 캐시에 데이터가 있고 모두 확정(종료/취소)이면 그대로 반환
+ *   2. 아니면 네이버 스포츠 스케줄 API(JSON)에서 가져와 파싱·매핑
  *   3. service_role 로 kbo_games 에 upsert(캐싱) — 키가 없으면 캐싱만 생략
  *   4. 어떤 에러든 빈 배열([])로 응답
- *
- * 응답: KBOGameResult[]  (팀/구장은 우리 코드로 매핑된 값)
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const month = searchParams.get("month") ?? "";
   const date = searchParams.get("date") ?? "";
+
+  // 월간 일정 모드 (YYYY-MM)
+  if (month) {
+    if (!/^\d{4}-\d{2}$/.test(month)) {
+      return NextResponse.json([] as KBOScheduleGame[]);
+    }
+    const [year, mon] = month.split("-").map(Number);
+    const fromDate = `${month}-01`;
+    const lastDay = new Date(year, mon, 0).getDate();
+    const toDate = `${month}-${String(lastDay).padStart(2, "0")}`;
+
+    try {
+      const admin = createAdminClient();
+
+      // 1. 네이버 스케줄 API는 fromDate~toDate 범위 조회를 지원하므로
+      //    월 전체를 단 한 번의 호출로 가져온다 (날짜별 30회 호출 불필요).
+      const rows = await fetchKboGames(fromDate, toDate);
+
+      if (rows.length > 0) {
+        // 2. 캐싱 (best-effort) 후 신선한 데이터 반환
+        await cacheRows(admin, rows);
+        return NextResponse.json(rows.map(rowToSchedule));
+      }
+
+      // 3. 네이버 실패(네트워크 등) — 캐시로 폴백.
+      //    단일 날짜(api/kbo?date=) 호출로 일부 날짜만 캐시돼 있을 수 있어
+      //    "완결 여부"는 신뢰하지 않고, 가진 만큼만 폴백으로 돌려준다.
+      const db = admin ?? (await createServerClient());
+      const { data: cachedData } = await db
+        .from("kbo_games")
+        .select("*")
+        .gte("game_date", fromDate)
+        .lte("game_date", toDate);
+      const cached = (cachedData ?? []) as KBOGame[];
+      return NextResponse.json(cached.map(rowToSchedule));
+    } catch (err) {
+      console.error("[kbo] 월간 일정 조회 실패:", err);
+      return NextResponse.json([] as KBOScheduleGame[]);
+    }
+  }
 
   // 날짜 형식 검증 (YYYY-MM-DD)
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
@@ -48,35 +95,39 @@ export async function GET(request: Request) {
 
     // 모든 경기가 종료/취소된 날이면 캐시가 확정값이므로 그대로 반환.
     // 예정/진행 중 경기가 섞여 있으면 최신 결과 반영을 위해 다시 가져온다.
-    const allFinal =
-      cached.length > 0 &&
-      cached.every((g) => g.status === "finished" || g.status === "cancelled");
-    if (allFinal) {
+    if (cached.length > 0 && cached.every(isFinal)) {
       return NextResponse.json(cached.map(rowToResult));
     }
 
     // 2. 네이버에서 가져와 파싱
-    const rows = await fetchKboGames(date);
+    const rows = await fetchKboGames(date, date);
     if (rows.length === 0) {
       // 네트워크 실패 등 — 캐시라도 있으면 반환, 없으면 빈 배열
       return NextResponse.json(cached.map(rowToResult));
     }
 
     // 3. 캐싱 (best-effort — service_role 이 있을 때만 시도)
-    if (admin) {
-      const { error: upsertError } = await admin
-        .from("kbo_games")
-        .upsert(rows, { onConflict: "game_date,home_team,away_team" });
-      if (upsertError) {
-        console.error("[kbo] 캐시 저장 실패:", upsertError.message);
-      }
-    }
+    await cacheRows(admin, rows);
 
     // 4. 응답
     return NextResponse.json(rows.map(rowToResult));
   } catch (err) {
     console.error("[kbo] 조회 실패:", err);
     return NextResponse.json([] as KBOGameResult[]);
+  }
+}
+
+/** kbo_games 에 best-effort upsert (admin 클라이언트가 있을 때만) */
+async function cacheRows(
+  admin: ReturnType<typeof createAdminClient>,
+  rows: KBOGame[]
+): Promise<void> {
+  if (!admin) return;
+  const { error } = await admin
+    .from("kbo_games")
+    .upsert(rows, { onConflict: "game_date,home_team,away_team" });
+  if (error) {
+    console.error("[kbo] 캐시 저장 실패:", error.message);
   }
 }
 
@@ -122,18 +173,23 @@ interface NaverGame {
   gameStatusCode?: string;
   cancel?: boolean;
   suspended?: boolean;
+  gameDate?: number | string;
+  gameDateTime?: string;
 }
 
 /**
- * 네이버 스포츠 스케줄 API에서 특정 날짜의 KBO 경기를 가져와
- * kbo_games 테이블 형태의 row 배열로 변환한다.
+ * 네이버 스포츠 스케줄 API에서 [fromDate, toDate] 범위의 KBO 경기를 가져와
+ * kbo_games 테이블 형태의 row 배열로 변환한다 (각 row 의 game_date 는 실제 경기일).
  */
-async function fetchKboGames(date: string): Promise<KBOGame[]> {
+async function fetchKboGames(
+  fromDate: string,
+  toDate: string
+): Promise<KBOGame[]> {
   const url =
     `https://api-gw.sports.naver.com/schedule/games` +
     `?fields=basic,schedule,baseball` +
     `&upperCategoryId=kbaseball&categoryId=kbo` +
-    `&fromDate=${date}&toDate=${date}&size=500`;
+    `&fromDate=${fromDate}&toDate=${toDate}&size=500`;
 
   const res = await fetch(url, {
     headers: {
@@ -171,7 +227,7 @@ async function fetchKboGames(date: string): Promise<KBOGame[]> {
 
     rows.push({
       // id/fetched_at 은 DB 기본값에 맡긴다.
-      game_date: date,
+      game_date: parseGameDate(g, fromDate),
       stadium,
       home_team: home,
       away_team: away,
@@ -183,6 +239,21 @@ async function fetchKboGames(date: string): Promise<KBOGame[]> {
   }
 
   return rows;
+}
+
+/**
+ * 네이버 경기 객체에서 경기일(YYYY-MM-DD)을 추출한다.
+ * gameDate(20260614) / gameDateTime(ISO) 등 표기 변형을 모두 처리하고,
+ * 파싱 실패 시 fallback(요청 시작일)을 사용한다.
+ */
+function parseGameDate(g: NaverGame, fallback: string): string {
+  const raw = g.gameDate ?? g.gameDateTime;
+  if (raw === undefined || raw === null) return fallback;
+  const digits = String(raw).replace(/\D/g, "");
+  if (digits.length >= 8) {
+    return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+  }
+  return fallback;
 }
 
 /** 네이버 팀명 → 팀 코드 (공백 제거 후 매핑) */
@@ -221,7 +292,7 @@ function parseScore(value: number | string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-/** kbo_games row → API 응답 형태 */
+/** kbo_games row → API 응답 형태 (날짜 미포함) */
 function rowToResult(row: KBOGame): KBOGameResult {
   return {
     homeTeam: row.home_team,
@@ -231,4 +302,9 @@ function rowToResult(row: KBOGame): KBOGameResult {
     stadium: row.stadium,
     status: row.status,
   };
+}
+
+/** kbo_games row → 월간 일정 응답 형태 (날짜 포함) */
+function rowToSchedule(row: KBOGame): KBOScheduleGame {
+  return { date: row.game_date, ...rowToResult(row) };
 }

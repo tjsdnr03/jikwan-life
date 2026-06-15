@@ -6,13 +6,66 @@ import Link from "next/link";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
+import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
-import { displayDate, resultLabel, winRate } from "@/lib/utils";
-import type { GameResult, Record, TeamCode } from "@/types";
+import { displayDate, formatDate, resultLabel, winRate } from "@/lib/utils";
+import type {
+  GameResult,
+  GameStatus,
+  KBOScheduleGame,
+  Record,
+  TeamCode,
+} from "@/types";
 
 interface Profile {
   nickname: string | null;
   my_team: TeamCode;
+}
+
+/** 내 팀 경기 + 내 팀 기준 점수 */
+interface MyGame {
+  game: KBOScheduleGame;
+  isHome: boolean;
+  opponent: TeamCode;
+  myScore: number | null;
+  opponentScore: number | null;
+}
+
+function statusLabel(status: GameStatus): string {
+  switch (status) {
+    case "scheduled":
+      return "경기 예정";
+    case "live":
+      return "경기 중";
+    case "finished":
+      return "경기 종료";
+    case "cancelled":
+      return "취소/연기";
+  }
+}
+
+/** 월간 일정에서 오늘 경기(없으면 다가오는 가장 가까운 경기)를 고른다 */
+function pickMyGame(
+  schedule: KBOScheduleGame[],
+  myTeam: TeamCode
+): MyGame | null {
+  const today = formatDate(new Date());
+  const mine = schedule
+    .filter((g) => g.homeTeam === myTeam || g.awayTeam === myTeam)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  const target =
+    mine.find((g) => g.date === today) ?? mine.find((g) => g.date >= today);
+  if (!target) return null;
+
+  const isHome = target.homeTeam === myTeam;
+  return {
+    game: target,
+    isHome,
+    opponent: isHome ? target.awayTeam : target.homeTeam,
+    myScore: isHome ? target.homeScore : target.awayScore,
+    opponentScore: isHome ? target.awayScore : target.homeScore,
+  };
 }
 
 /**
@@ -25,6 +78,7 @@ export default function HomePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [records, setRecords] = useState<Record[]>([]);
   const [recentRecords, setRecentRecords] = useState<Record[]>([]);
+  const [myGame, setMyGame] = useState<MyGame | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -65,6 +119,19 @@ export default function HomePage() {
       setRecords(list);
       setRecentRecords(list.slice(0, 3));
       setLoading(false);
+
+      // 4. 이번 달 KBO 일정에서 오늘/다가오는 내 팀 경기 (실패해도 무시)
+      const monthStr = formatDate(new Date()).slice(0, 7); // YYYY-MM
+      const myTeam = (profileData as Profile).my_team;
+      try {
+        const res = await fetch(`/api/kbo?month=${monthStr}`);
+        const schedule = res.ok ? ((await res.json()) as KBOScheduleGame[]) : [];
+        if (Array.isArray(schedule)) {
+          setMyGame(pickMyGame(schedule, myTeam));
+        }
+      } catch {
+        // 일정 로드 실패 — 경기 섹션만 생략
+      }
     }
 
     load();
@@ -100,6 +167,56 @@ export default function HomePage() {
               </p>
             </div>
           </header>
+
+          {/* 오늘/다가오는 내 팀 경기 */}
+          {myGame ? (
+            <section className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-slate-500">
+                  {myGame.game.date === formatDate(new Date())
+                    ? "오늘의 경기"
+                    : "다가오는 경기"}
+                </h2>
+                <span
+                  className={
+                    myGame.isHome
+                      ? "rounded-full bg-[#1A56DB]/10 px-2 py-0.5 text-xs font-semibold text-[#1A56DB]"
+                      : "rounded-full bg-red-400/15 px-2 py-0.5 text-xs font-semibold text-red-500"
+                  }
+                >
+                  {myGame.isHome ? "홈경기" : "원정경기"}
+                </span>
+              </div>
+
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <div className="flex flex-col items-center gap-1">
+                  <TeamMascot team={myTeam} size="lg" />
+                  <span className="text-xs font-medium text-slate-600">
+                    {myTeam.name}
+                  </span>
+                </div>
+                {myGame.myScore !== null && myGame.opponentScore !== null ? (
+                  <span className="text-xl font-bold text-slate-800">
+                    {myGame.myScore} : {myGame.opponentScore}
+                  </span>
+                ) : (
+                  <span className="text-sm font-semibold text-slate-400">vs</span>
+                )}
+                <div className="flex flex-col items-center gap-1">
+                  <TeamMascot team={myGame.opponent} size="lg" />
+                  <span className="text-xs font-medium text-slate-600">
+                    {getTeam(myGame.opponent).name}
+                  </span>
+                </div>
+              </div>
+
+              <p className="mt-3 text-center text-xs text-slate-500">
+                {displayDate(myGame.game.date)} ·{" "}
+                {getStadium(myGame.game.stadium).name} ·{" "}
+                {statusLabel(myGame.game.status)}
+              </p>
+            </section>
+          ) : null}
 
           <section className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
             <h2 className="text-sm font-semibold text-slate-500">시즌 요약</h2>

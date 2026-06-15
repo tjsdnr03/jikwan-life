@@ -110,6 +110,12 @@ export interface KBOGameResult {
   status: GameStatus;
 }
 
+/** /api/kbo?month=YYYY-MM 응답 한 경기 (날짜 포함 월간 일정) */
+export interface KBOScheduleGame extends KBOGameResult {
+  /** 경기 날짜 (YYYY-MM-DD) */
+  date: string;
+}
+
 /** 사용자 (users 테이블) */
 export interface User {
   id: string;
