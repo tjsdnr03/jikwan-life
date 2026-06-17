@@ -6,6 +6,8 @@ import StoryCard, {
   BG_PRESETS,
   type CardData,
   type CardMode,
+  type InfoPosition,
+  type OverlayLevel,
 } from "@/components/card/StoryCard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -123,6 +125,8 @@ export default function CardEditor({
   const cardRef = useRef<HTMLDivElement>(null);
 
   const [mode, setMode] = useState<CardMode>("fill");
+  const [infoPosition, setInfoPosition] = useState<InfoPosition>("bottom");
+  const [overlayLevel, setOverlayLevel] = useState<OverlayLevel>("normal");
   const [bgColor, setBgColor] = useState<string>(BG_PRESETS[0].color);
   const [showDeco, setShowDeco] = useState(false);
   /** 기기에서 새로 올린 사진 (우선 적용) */
@@ -318,6 +322,8 @@ export default function CardEditor({
             mode={mode}
             bgColor={bgColor}
             showDeco={showDeco}
+            infoPosition={infoPosition}
+            overlayLevel={overlayLevel}
           />
         </div>
       </div>
@@ -423,6 +429,68 @@ export default function CardEditor({
             </button>
           </div>
         </section>
+
+        {mode === "fill" ? (
+          <>
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">
+                정보 위치
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { value: "top", label: "상" },
+                    { value: "middle", label: "중" },
+                    { value: "bottom", label: "하" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setInfoPosition(value)}
+                    className={cn(
+                      "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
+                      infoPosition === value
+                        ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
+                        : "border-slate-100 bg-slate-50 text-slate-500"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <h3 className="mb-3 text-sm font-semibold text-slate-700">
+                정보 칸 투명도
+              </h3>
+              <div className="grid grid-cols-3 gap-2">
+                {(
+                  [
+                    { value: "soft", label: "은은" },
+                    { value: "normal", label: "기본" },
+                    { value: "strong", label: "선명" },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setOverlayLevel(value)}
+                    className={cn(
+                      "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
+                      overlayLevel === value
+                        ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
+                        : "border-slate-100 bg-slate-50 text-slate-500"
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </>
+        ) : null}
 
         {/* 배경색 */}
         <section>

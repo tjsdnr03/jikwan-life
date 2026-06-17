@@ -24,6 +24,31 @@ export interface CardData {
 }
 
 export type CardMode = "fill" | "matte";
+export type InfoPosition = "top" | "middle" | "bottom";
+export type OverlayLevel = "soft" | "normal" | "strong";
+
+const OVERLAY_OPACITY: Record<OverlayLevel, number> = {
+  soft: 0.24,
+  normal: 0.36,
+  strong: 0.5,
+};
+
+function getFillInfoWrapperStyle(position: InfoPosition): CSSProperties {
+  const base: CSSProperties = {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    padding: "0 16px",
+  };
+
+  if (position === "top") {
+    return { ...base, top: "13%" };
+  }
+  if (position === "middle") {
+    return { ...base, top: "50%", transform: "translateY(-50%)" };
+  }
+  return { ...base, bottom: "17%" };
+}
 
 // 여백(matte) 모드 배경색 프리셋 — 2단계 에디터에서 그대로 재사용
 export const BG_PRESETS = [
@@ -41,6 +66,10 @@ interface StoryCardProps {
   showDeco?: boolean; // 데코(별 등) 표시
   showCharacter?: boolean; // 캐릭터 스티커 표시
   characterUrl?: string; // 캐릭터 이미지 경로 (예: "/mascots/lions.png")
+  /** fill 모드: 정보 블록 세로 위치 */
+  infoPosition?: InfoPosition;
+  /** fill 모드: 정보 카드 배경(검정 오버레이) 투명도 */
+  overlayLevel?: OverlayLevel;
 }
 
 // 결과 영문 → 한글 표시
@@ -108,6 +137,8 @@ export default function StoryCard({
   showDeco = false,
   showCharacter = false,
   characterUrl,
+  infoPosition = "bottom",
+  overlayLevel = "normal",
 }: StoryCardProps) {
   const resultLabel = RESULT_LABEL[data.result];
   const scoreText = `${data.homeScore} : ${data.awayScore}`;
@@ -156,11 +187,11 @@ export default function StoryCard({
           />
         )}
 
-        {/* 정보 블록: 인스타 UI에 가리지 않게 하단 안전구역(17%)에 배치 */}
-        <div style={{ position: "absolute", left: 0, right: 0, bottom: "17%", padding: "0 16px" }}>
+        {/* 정보 블록: infoPosition 으로 상/중/하 배치 (인스타 UI 안전구역 고려) */}
+        <div style={getFillInfoWrapperStyle(infoPosition)}>
           <div
             style={{
-              background: "rgba(0,0,0,0.36)",
+              background: `rgba(0,0,0,${OVERLAY_OPACITY[overlayLevel]})`,
               border: "0.5px solid rgba(255,255,255,0.25)",
               borderRadius: 14,
               padding: "14px 16px",
