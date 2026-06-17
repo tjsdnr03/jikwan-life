@@ -27,6 +27,7 @@ export default function CardEditPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cardData, setCardData] = useState<CardData | null>(null);
+  const [recordPhotos, setRecordPhotos] = useState<string[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -62,6 +63,7 @@ export default function CardEditPage({
       }
 
       setCardData(recordToCardData(record));
+      setRecordPhotos(record.photos ?? []);
       setLoading(false);
     }
 
@@ -100,7 +102,7 @@ export default function CardEditPage({
             </Link>
           </div>
         ) : (
-          <CardEditor data={cardData} />
+          <CardEditor data={cardData} recordPhotos={recordPhotos} />
         )}
       </div>
     </main>

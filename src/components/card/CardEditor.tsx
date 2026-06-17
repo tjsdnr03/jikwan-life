@@ -55,6 +55,36 @@ async function normalizeImage(file: File): Promise<NormalizedImage> {
   }
 }
 
+/** 기록에 저장된 원격 사진도 동일한 EXIF 정규화 적용 */
+async function normalizeImageFromUrl(remoteUrl: string): Promise<NormalizedImage> {
+  try {
+    const response = await fetch(remoteUrl, { mode: "cors" });
+    if (!response.ok) throw new Error("fetch failed");
+    const blob = await response.blob();
+    const file = new File([blob], "record-photo.jpg", {
+      type: blob.type || "image/jpeg",
+    });
+    return normalizeImage(file);
+  } catch {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload = () =>
+        resolve({
+          url: remoteUrl,
+          width: img.naturalWidth,
+          height: img.naturalHeight,
+        });
+      img.onerror = () => resolve({ url: remoteUrl });
+      img.src = remoteUrl;
+    });
+  }
+}
+
+function revokeIfBlob(url?: string) {
+  if (url?.startsWith("blob:")) URL.revokeObjectURL(url);
+}
+
 // 로그인/기록 없이 단독 렌더링될 때만 쓰는 폴백 더미 데이터
 const MOCK_CARD_DATA: CardData = {
   homeTeam: "삼성",
@@ -76,30 +106,79 @@ function recommendMode(width: number, height: number): CardMode {
 interface CardEditorProps {
   /** 실제 직관 기록에서 변환한 카드 데이터 (없으면 더미로 폴백) */
   data?: CardData;
+  /** 기록에 저장된 사진 URL 목록 (2장 이상일 때 썸네일 선택 UI 표시) */
+  recordPhotos?: string[];
 }
 
 /**
  * StoryCard 에디터 (2단계)
  * 실제 기록(data)을 받아 모드 / 배경색 / 데코 / 사진 업로드로 미리보기 조정.
- * 사진은 기록의 첫 사진으로 시작하고, 에디터에서 교체/제거할 수 있다.
+ * 기록 사진 중 선택하거나, 기기에서 새 사진을 올릴 수 있다.
  */
-export default function CardEditor({ data = MOCK_CARD_DATA }: CardEditorProps) {
+export default function CardEditor({
+  data = MOCK_CARD_DATA,
+  recordPhotos = [],
+}: CardEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
   const [mode, setMode] = useState<CardMode>("fill");
   const [bgColor, setBgColor] = useState<string>(BG_PRESETS[0].color);
   const [showDeco, setShowDeco] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState<string | undefined>(data.photoUrl);
+  /** 기기에서 새로 올린 사진 (우선 적용) */
+  const [customPhotoUrl, setCustomPhotoUrl] = useState<string | undefined>(
+    undefined
+  );
+  /** 기록 사진 선택 → normalizeImageFromUrl 결과 blob */
+  const [recordPhotoBlobUrl, setRecordPhotoBlobUrl] = useState<
+    string | undefined
+  >(undefined);
+  /** 썸네일 강조용 — 선택된 기록 사진 원본 URL */
+  const [selectedRemoteUrl, setSelectedRemoteUrl] = useState<
+    string | undefined
+  >(data.photoUrl);
   const [working, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const photoUrl = customPhotoUrl ?? recordPhotoBlobUrl;
+  const showRecordThumbnails = recordPhotos.length >= 2;
+
+  // 기록 첫 사진(또는 data.photoUrl 변경) → 정규화 후 카드에 반영
+  useEffect(() => {
+    let cancelled = false;
+    const remoteUrl = data.photoUrl;
+
+    if (!remoteUrl) {
+      setRecordPhotoBlobUrl(undefined);
+      setSelectedRemoteUrl(undefined);
+      return;
+    }
+
+    setSelectedRemoteUrl(remoteUrl);
+
+    normalizeImageFromUrl(remoteUrl).then(({ url, width, height }) => {
+      if (cancelled) {
+        revokeIfBlob(url);
+        return;
+      }
+      setRecordPhotoBlobUrl((prev) => {
+        revokeIfBlob(prev);
+        return url;
+      });
+      if (width && height) setMode(recommendMode(width, height));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [data.photoUrl]);
+
   useEffect(() => {
     return () => {
-      // blob URL 만 정리 (원격 사진 URL 에 대해서는 no-op)
-      if (photoUrl?.startsWith("blob:")) URL.revokeObjectURL(photoUrl);
+      revokeIfBlob(customPhotoUrl);
+      revokeIfBlob(recordPhotoBlobUrl);
     };
-  }, [photoUrl]);
+  }, [customPhotoUrl, recordPhotoBlobUrl]);
 
   const cardData: CardData = {
     ...data,
@@ -113,27 +192,38 @@ export default function CardEditor({ data = MOCK_CARD_DATA }: CardEditorProps) {
     setMode("matte");
   };
 
+  const handleSelectRecordPhoto = async (remoteUrl: string) => {
+    setSelectedRemoteUrl(remoteUrl);
+    revokeIfBlob(customPhotoUrl);
+    setCustomPhotoUrl(undefined);
+
+    const { url, width, height } = await normalizeImageFromUrl(remoteUrl);
+    setRecordPhotoBlobUrl((prev) => {
+      revokeIfBlob(prev);
+      return url;
+    });
+    if (width && height) setMode(recommendMode(width, height));
+  };
+
   const handleSelectPhoto = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
 
-    // EXIF 회전을 적용해 정규화한 이미지를 사용 (저장 PNG 에서 사진이 눕는 문제 방지)
     const { url, width, height } = await normalizeImage(file);
 
-    setPhotoUrl((prev) => {
-      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return url;
-    });
+    revokeIfBlob(customPhotoUrl);
+    setCustomPhotoUrl(url);
 
     if (width && height) setMode(recommendMode(width, height));
   };
 
   const handleRemovePhoto = () => {
-    setPhotoUrl((prev) => {
-      if (prev?.startsWith("blob:")) URL.revokeObjectURL(prev);
-      return undefined;
-    });
+    revokeIfBlob(customPhotoUrl);
+    revokeIfBlob(recordPhotoBlobUrl);
+    setCustomPhotoUrl(undefined);
+    setRecordPhotoBlobUrl(undefined);
+    setSelectedRemoteUrl(undefined);
   };
 
   /**
@@ -237,6 +327,38 @@ export default function CardEditor({ data = MOCK_CARD_DATA }: CardEditorProps) {
         {/* 사진 */}
         <section>
           <h3 className="mb-3 text-sm font-semibold text-slate-700">사진</h3>
+
+          {showRecordThumbnails ? (
+            <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+              {recordPhotos.map((url, index) => {
+                const selected =
+                  !customPhotoUrl && selectedRemoteUrl === url;
+                return (
+                  <button
+                    key={`${url}-${index}`}
+                    type="button"
+                    onClick={() => handleSelectRecordPhoto(url)}
+                    className={cn(
+                      "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
+                      selected
+                        ? "border-[#1A56DB] ring-2 ring-[#1A56DB]/20"
+                        : "border-slate-100"
+                    )}
+                    aria-label={`기록 사진 ${index + 1} 선택`}
+                    aria-pressed={selected}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
           <div className="flex gap-2">
             <button
               type="button"

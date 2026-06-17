@@ -19,6 +19,7 @@ export default function CardPreviewPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [cardData, setCardData] = useState<CardData | null>(null);
+  const [recordPhotos, setRecordPhotos] = useState<string[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -42,7 +43,10 @@ export default function CardPreviewPage() {
         .limit(1)
         .maybeSingle<GameRecord>();
 
-      if (record) setCardData(recordToCardData(record));
+      if (record) {
+        setCardData(recordToCardData(record));
+        setRecordPhotos(record.photos ?? []);
+      }
       setLoading(false);
     }
 
@@ -68,7 +72,7 @@ export default function CardPreviewPage() {
             불러오는 중...
           </p>
         ) : cardData ? (
-          <CardEditor data={cardData} />
+          <CardEditor data={cardData} recordPhotos={recordPhotos} />
         ) : (
           <div className="mt-20 text-center">
             <p className="text-sm text-slate-500">아직 직관 기록이 없어요.</p>
