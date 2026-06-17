@@ -57,6 +57,8 @@ export interface Stadium {
   code: StadiumCode;
   /** 구장 이름 (예: '잠실야구장') */
   name: string;
+  /** 짧은 표시용 구장 약칭 (예: '잠실', '고척' — 카드/캘린더 등 좁은 영역용) */
+  short: string;
   /** 도시 */
   city: string;
   /** 홈으로 사용하는 팀 코드 목록 */

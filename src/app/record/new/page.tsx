@@ -248,8 +248,8 @@ export default function NewRecordPage() {
       return;
     }
 
-    // 저장 성공 → 방금 만든 기록의 카드 페이지로 이동
-    router.push(`/card/${inserted.id}`);
+    // 저장 성공 → 기록 상세로 이동 (카드 만들기는 상세 화면에서)
+    router.push(`/record/${inserted.id}`);
   };
 
   return (
