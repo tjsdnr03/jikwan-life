@@ -8,7 +8,7 @@ import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
-import { displayDate, formatDate, resultLabel, winRate } from "@/lib/utils";
+import { cn, displayDate, formatDate, resultLabel, winRate } from "@/lib/utils";
 import type {
   GameResult,
   GameStatus,
@@ -44,6 +44,68 @@ function statusLabel(status: GameStatus): string {
   }
 }
 
+function gameStatusBadgeClass(status: GameStatus): string {
+  const base = "rounded-full px-2 py-0.5 text-[10px] font-semibold";
+  switch (status) {
+    case "live":
+      return `${base} bg-accent-bg-strong text-accent`;
+    case "finished":
+      return `${base} bg-surface-subtle text-text-secondary`;
+    case "scheduled":
+      return `${base} bg-accent-bg text-accent-muted`;
+    case "cancelled":
+      return `${base} bg-surface-subtle text-text-tertiary`;
+  }
+}
+
+/** 팀 구분용 작은 색 점 */
+function TeamDot({ color }: { color: string }) {
+  return (
+    <span
+      className="inline-block h-2 w-2 shrink-0 rounded-full ring-2 ring-white/60"
+      style={{ backgroundColor: color }}
+      aria-hidden
+    />
+  );
+}
+
+/** 승률 미니 도넛 */
+function WinRateDonut({ percent }: { percent: number }) {
+  const radius = 17;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (percent / 100) * circumference;
+
+  return (
+    <svg
+      width="42"
+      height="42"
+      viewBox="0 0 42 42"
+      className="shrink-0 -rotate-90"
+      aria-hidden
+    >
+      <circle
+        cx="21"
+        cy="21"
+        r={radius}
+        fill="none"
+        stroke="var(--surface-subtle)"
+        strokeWidth="3.5"
+      />
+      <circle
+        cx="21"
+        cy="21"
+        r={radius}
+        fill="none"
+        stroke="var(--accent)"
+        strokeWidth="3.5"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 /** 월간 일정에서 오늘 경기(없으면 다가오는 가장 가까운 경기)를 고른다 */
 function pickMyGame(
   schedule: KBOScheduleGame[],
@@ -70,7 +132,7 @@ function pickMyGame(
 
 /**
  * 홈 (/home)
- * 로그인 후 메인 화면 — 시즌 요약 + 최근 기록 + 직관 기록 CTA
+ * 로그인 후 메인 화면 — 글래스 UI 파일럿
  */
 export default function HomePage() {
   const router = useRouter();
@@ -84,7 +146,6 @@ export default function HomePage() {
     const supabase = createClient();
 
     async function load() {
-      // 1. 로그인 확인
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -94,7 +155,6 @@ export default function HomePage() {
         return;
       }
 
-      // 2. 프로필 조회 — 없으면 온보딩으로
       const { data: profileData } = await supabase
         .from("users")
         .select("nickname, my_team")
@@ -108,7 +168,6 @@ export default function HomePage() {
 
       setProfile(profileData as Profile);
 
-      // 3. 시즌 요약용 전체 기록 + 최근 3개
       const { data: allRecords } = await supabase
         .from("records")
         .select("*")
@@ -120,8 +179,7 @@ export default function HomePage() {
       setRecentRecords(list.slice(0, 3));
       setLoading(false);
 
-      // 4. 이번 달 KBO 일정에서 오늘/다가오는 내 팀 경기 (실패해도 무시)
-      const monthStr = formatDate(new Date()).slice(0, 7); // YYYY-MM
+      const monthStr = formatDate(new Date()).slice(0, 7);
       const myTeam = (profileData as Profile).my_team;
       try {
         const res = await fetch(`/api/kbo?month=${monthStr}`);
@@ -139,8 +197,8 @@ export default function HomePage() {
 
   if (loading || !profile) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-[#EBF2FD]">
-        <p className="text-sm text-slate-400">불러오는 중...</p>
+      <main className="page-gradient flex flex-1 items-center justify-center">
+        <p className="text-sm text-text-tertiary">불러오는 중...</p>
       </main>
     );
   }
@@ -149,147 +207,159 @@ export default function HomePage() {
   const wins = records.filter((r) => r.result === "win").length;
   const losses = records.filter((r) => r.result === "loss").length;
   const winRatePercent = Math.round(winRate(wins, losses) * 100);
+  const opponentTeam = myGame ? getTeam(myGame.opponent) : null;
 
   return (
     <>
-      <main className="flex flex-1 flex-col bg-[#EBF2FD] px-6 pb-28 pt-8">
+      <main className="page-gradient flex flex-1 flex-col px-5 pb-28 pt-8">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
-          <header className="mb-8 flex items-center gap-4">
-            <TeamMascot team={myTeam} size="xl" />
-            <div>
-              <h1 className="text-2xl font-bold text-slate-800">
-                {profile.nickname
-                  ? `${profile.nickname}님, 안녕하세요!`
-                  : "안녕하세요!"}
-              </h1>
-              <p className="mt-1 text-base text-slate-500">
-                {myTeam.name} 오늘도 승리하세요
+          {/* 헤더 — 마스코트는 작게 한 곳만 */}
+          <header className="mb-7 flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium text-text-secondary">
+                {myTeam.name} 팬
               </p>
+              <h1 className="mt-1 text-[1.625rem] font-bold leading-snug tracking-tight text-text-primary">
+                {profile.nickname
+                  ? `${profile.nickname}님, 안녕하세요`
+                  : "안녕하세요"}
+              </h1>
+              <p className="mt-1.5 text-sm text-text-tertiary">
+                오늘도 좋은 직관 되세요
+              </p>
+            </div>
+            <div className="glass flex shrink-0 items-center justify-center rounded-[var(--radius-md)] p-2">
+              <TeamMascot team={myTeam} size="md" />
             </div>
           </header>
 
           {/* 오늘/다가오는 내 팀 경기 */}
-          {myGame ? (
-            <section className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-slate-500">
+          {myGame && opponentTeam ? (
+            <section className="glass-card mb-3 p-5">
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                   {myGame.game.date === formatDate(new Date())
                     ? "오늘의 경기"
                     : "다가오는 경기"}
-                </h2>
-                <span
-                  className={
-                    myGame.isHome
-                      ? "rounded-full bg-[#1A56DB]/10 px-2 py-0.5 text-xs font-semibold text-[#1A56DB]"
-                      : "rounded-full bg-red-400/15 px-2 py-0.5 text-xs font-semibold text-red-500"
-                  }
-                >
-                  {myGame.isHome ? "홈경기" : "원정경기"}
-                </span>
+                </p>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <span className={gameStatusBadgeClass(myGame.game.status)}>
+                    {statusLabel(myGame.game.status)}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                      myGame.isHome
+                        ? "bg-accent-bg text-accent"
+                        : "bg-surface-subtle text-text-secondary"
+                    )}
+                  >
+                    {myGame.isHome ? "홈경기" : "원정경기"}
+                  </span>
+                </div>
               </div>
 
               <div className="mt-4 flex items-center justify-center gap-3">
-                <div className="flex flex-col items-center gap-1">
-                  <TeamMascot team={myTeam} size="lg" />
-                  <span className="text-xs font-medium text-slate-600">
+                <div className="flex items-center gap-1.5">
+                  <TeamDot color={myTeam.color} />
+                  <span className="text-sm font-semibold text-text-primary">
                     {myTeam.name}
                   </span>
                 </div>
                 {myGame.myScore !== null && myGame.opponentScore !== null ? (
-                  <span className="text-xl font-bold text-slate-800">
-                    {myGame.myScore} : {myGame.opponentScore}
+                  <span className="text-3xl font-bold tabular-nums tracking-tight text-accent">
+                    {myGame.myScore}
+                    <span className="mx-1.5 text-xl font-medium text-text-tertiary">
+                      :
+                    </span>
+                    {myGame.opponentScore}
                   </span>
                 ) : (
-                  <span className="text-sm font-semibold text-slate-400">vs</span>
+                  <span className="text-sm font-semibold text-text-tertiary">
+                    vs
+                  </span>
                 )}
-                <div className="flex flex-col items-center gap-1">
-                  <TeamMascot team={myGame.opponent} size="lg" />
-                  <span className="text-xs font-medium text-slate-600">
-                    {getTeam(myGame.opponent).name}
+                <div className="flex items-center gap-1.5">
+                  <TeamDot color={opponentTeam.color} />
+                  <span className="text-sm font-semibold text-text-primary">
+                    {opponentTeam.name}
                   </span>
                 </div>
               </div>
 
-              <p className="mt-3 text-center text-xs text-slate-500">
+              <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary">
                 {displayDate(myGame.game.date)} ·{" "}
-                {getStadium(myGame.game.stadium).name} ·{" "}
-                {statusLabel(myGame.game.status)}
+                {getStadium(myGame.game.stadium).name}
               </p>
             </section>
           ) : null}
 
-          <section className="mb-8 rounded-2xl bg-white p-5 shadow-sm">
-            <h2 className="text-sm font-semibold text-slate-500">시즌 요약</h2>
-            <div className="mt-4 grid grid-cols-2 gap-4">
-              <div
-                className="rounded-xl px-4 py-3 text-center"
-                style={{ backgroundColor: myTeam.pastelBg }}
-              >
-                <p
-                  className="text-2xl font-bold"
-                  style={{ color: myTeam.color }}
-                >
+          {/* 시즌 요약 */}
+          <section className="glass-card mb-3 p-5">
+            <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+              시즌 요약
+            </p>
+            <div className="mt-4 grid grid-cols-2">
+              <div className="pr-4">
+                <p className="text-4xl font-bold tabular-nums tracking-tight text-accent">
                   {records.length}
                 </p>
-                <p className="mt-1 text-xs text-slate-500">직관</p>
+                <p className="mt-1.5 text-sm text-text-secondary">직관</p>
               </div>
-              <div
-                className="rounded-xl px-4 py-3 text-center"
-                style={{ backgroundColor: myTeam.pastelBg }}
-              >
-                <p
-                  className="text-2xl font-bold"
-                  style={{ color: myTeam.color }}
-                >
-                  {winRatePercent}%
-                </p>
-                <p className="mt-1 text-xs text-slate-500">승률</p>
+              <div className="relative border-l border-[var(--border-subtle)] pl-4">
+                <div className="flex items-center gap-3">
+                  <WinRateDonut percent={winRatePercent} />
+                  <div>
+                    <p className="text-4xl font-bold tabular-nums tracking-tight text-accent">
+                      {winRatePercent}
+                      <span className="ml-0.5 text-2xl font-semibold">%</span>
+                    </p>
+                    <p className="mt-1.5 text-sm text-text-secondary">승률</p>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
           {/* 최근 기록 */}
           {recentRecords.length > 0 ? (
-            <section className="mb-8">
-              <h2 className="mb-3 text-sm font-semibold text-slate-500">
+            <section className="mb-5">
+              <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                 최근 기록
-              </h2>
-              <ul className="space-y-3">
+              </p>
+              <ul className="space-y-2">
                 {recentRecords.map((record) => {
                   const opponent = getTeam(record.opponent_team);
                   return (
-                    <li
-                      key={record.id}
-                      className="flex items-center justify-between rounded-2xl bg-white p-4 shadow-sm"
-                    >
-                      <div className="flex items-center gap-2">
-                        <TeamMascot team={myTeam} size="md" />
-                        <span className="text-xs text-slate-400">vs</span>
-                        <TeamMascot team={opponent} size="md" />
-                        <div>
-                        <p className="text-sm font-semibold text-slate-800">
-                          {myTeam.name} vs {opponent.name}
-                        </p>
-                        <p className="mt-0.5 text-xs text-slate-400">
-                          {displayDate(record.game_date)}
-                        </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        {record.my_score !== null &&
-                        record.opponent_score !== null ? (
-                          <p className="text-sm font-bold text-slate-700">
-                            {record.my_score} : {record.opponent_score}
+                    <li key={record.id}>
+                      <Link
+                        href={`/record/${record.id}`}
+                        className="glass-card flex items-center justify-between gap-4 p-4 transition-opacity active:opacity-80"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-text-primary">
+                            {myTeam.name} vs {opponent.name}
                           </p>
-                        ) : null}
-                        {record.result ? (
-                          <span
-                            className={resultBadgeClass(record.result)}
-                          >
-                            {resultLabel(record.result)}
-                          </span>
-                        ) : null}
-                      </div>
+                          <p className="mt-1 text-xs text-text-tertiary">
+                            {displayDate(record.game_date)}
+                          </p>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          {record.my_score !== null &&
+                          record.opponent_score !== null ? (
+                            <p className="text-lg font-bold tabular-nums text-text-primary">
+                              {record.my_score} : {record.opponent_score}
+                            </p>
+                          ) : null}
+                          {record.result ? (
+                            <span
+                              className={resultBadgeClass(record.result)}
+                            >
+                              {resultLabel(record.result)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </Link>
                     </li>
                   );
                 })}
@@ -297,35 +367,35 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          <div className="mt-auto space-y-4">
+          <div className="mt-auto space-y-3 pt-1">
             <Link
               href="/record/new"
-              className="flex h-14 w-full items-center justify-center rounded-2xl bg-[#B8D4F8] text-base font-semibold text-[#1A56DB] shadow-sm transition-colors hover:bg-[#a5c7f5] active:scale-[0.99]"
+              className="flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-accent text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-accent-hover active:scale-[0.99]"
             >
               오늘의 직관 기록하기
             </Link>
             {recentRecords.length === 0 ? (
-              <p className="text-center text-sm text-slate-400">
-                최근 기록이 없습니다
+              <p className="text-center text-sm text-text-tertiary">
+                아직 기록이 없어요. 첫 직관을 남겨보세요!
               </p>
             ) : null}
           </div>
         </div>
       </main>
-      <BottomNav />
+      <BottomNav variant="glass" />
     </>
   );
 }
 
 function resultBadgeClass(result: GameResult): string {
   const base =
-    "ml-auto mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold";
+    "mt-1 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold";
   switch (result) {
     case "win":
-      return `${base} bg-emerald-50 text-emerald-600`;
+      return `${base} bg-accent-bg text-accent`;
     case "loss":
-      return `${base} bg-red-50 text-red-500`;
+      return `${base} bg-surface-subtle text-text-secondary`;
     case "draw":
-      return `${base} bg-slate-100 text-slate-500`;
+      return `${base} bg-surface-subtle text-text-tertiary`;
   }
 }

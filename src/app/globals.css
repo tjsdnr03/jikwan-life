@@ -1,28 +1,126 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css");
 @import "tailwindcss";
 
+/* ── Design tokens (팀 컬러 교체 시 --accent* 변수만 바꾸면 됨) ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1e293b;
+
   --font-pretendard: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui,
     sans-serif;
+
+  /* Accent — 기본 블루 (추후 응원팀 색으로 교체) */
+  --accent: #3b6fd4;
+  --accent-hover: #3260bd;
+  --accent-muted: #5a87dc;
+  --accent-bg: rgba(59, 111, 212, 0.1);
+  --accent-bg-strong: rgba(59, 111, 212, 0.16);
+  --accent-border: rgba(59, 111, 212, 0.22);
+
+  /* Neutrals — 웜 오프화이트·연한 회베이지 */
+  --surface: #ffffff;
+  --surface-muted: #f0eeea;
+  --surface-subtle: #ebe8e3;
+  --background: #f6f4f0;
+  --text-primary: #1e293b;
+  --text-secondary: #64748b;
+  --text-tertiary: #94a3b8;
+  --border-subtle: rgba(45, 40, 35, 0.08);
+
+  /* Glass — 반투명 흰색 + blur, 배경이 비치도록 */
+  --glass-bg: rgba(255, 255, 255, 0.58);
+  --glass-bg-strong: rgba(255, 255, 255, 0.62);
+  --glass-border: rgba(255, 255, 255, 0.42);
+  --glass-border-highlight: rgba(255, 255, 255, 0.92);
+  --glass-border-highlight-soft: rgba(255, 255, 255, 0.78);
+  --glass-blur: 22px;
+
+  /* Radius */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+
+  /* Shadow — 아래로 넓고 부드럽게 (유리판 부유감) */
+  --shadow-soft: 0 2px 10px rgba(30, 35, 45, 0.05);
+  --shadow-glass:
+    0 18px 44px rgba(30, 35, 45, 0.09),
+    0 6px 16px rgba(30, 35, 45, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.78);
+  --shadow-glass-lg: 0 24px 52px rgba(30, 35, 45, 0.11);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-bg: var(--accent-bg);
+  --color-accent-bg-strong: var(--accent-bg-strong);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
   --font-sans: var(--font-pretendard);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-pretendard);
+}
+
+/* ── Glass utilities ── */
+.glass,
+.glass-strong,
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-highlight);
+  border-left-color: var(--glass-border-highlight-soft);
+  box-shadow: var(--shadow-glass);
+}
+
+.glass-strong {
+  background: var(--glass-bg-strong);
+}
+
+.glass-card {
+  border-radius: var(--radius-lg);
+}
+
+.glass-bar {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  border-top: 1px solid var(--glass-border-highlight);
+  box-shadow:
+    0 -12px 36px rgba(30, 35, 45, 0.06),
+    0 -1px 0 rgba(255, 255, 255, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+/* 홈 등 글래스 UI용 페이지 배경 — 웜 베이스 + 모서리 블루 광원 */
+.page-gradient {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(
+      ellipse 72% 52% at 92% -4%,
+      rgba(59, 111, 212, 0.1),
+      transparent 56%
+    ),
+    radial-gradient(
+      ellipse 58% 48% at -6% 12%,
+      rgba(59, 111, 212, 0.07),
+      transparent 52%
+    ),
+    radial-gradient(
+      ellipse 42% 38% at 100% 68%,
+      rgba(59, 111, 212, 0.05),
+      transparent 48%
+    );
 }
