@@ -106,6 +106,31 @@ function WinRateDonut({ percent }: { percent: number }) {
   );
 }
 
+/** 오늘의 경기 카드 스켈레톤 — 실제 카드와 동일 높이 */
+function TodayGameSkeleton() {
+  return (
+    <section
+      className="glass-card mb-3 min-h-[152px] p-5"
+      aria-busy="true"
+      aria-label="경기 정보 불러오는 중"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="skeleton h-3 w-[4.5rem] rounded-full" />
+        <div className="flex gap-1.5">
+          <div className="skeleton h-5 w-14 rounded-full" />
+          <div className="skeleton h-5 w-[3.25rem] rounded-full" />
+        </div>
+      </div>
+      <div className="mt-5 flex items-center justify-center gap-5">
+        <div className="skeleton h-4 w-14 rounded-full" />
+        <div className="skeleton h-9 w-[4.5rem] rounded-lg" />
+        <div className="skeleton h-4 w-14 rounded-full" />
+      </div>
+      <div className="mx-auto mt-5 skeleton h-3 w-48 max-w-full rounded-full" />
+    </section>
+  );
+}
+
 /** 월간 일정에서 오늘 경기(없으면 다가오는 가장 가까운 경기)를 고른다 */
 function pickMyGame(
   schedule: KBOScheduleGame[],
@@ -141,6 +166,7 @@ export default function HomePage() {
   const [records, setRecords] = useState<Record[]>([]);
   const [recentRecords, setRecentRecords] = useState<Record[]>([]);
   const [myGame, setMyGame] = useState<MyGame | null>(null);
+  const [gameLoading, setGameLoading] = useState(true);
 
   useEffect(() => {
     const supabase = createClient();
@@ -189,6 +215,8 @@ export default function HomePage() {
         }
       } catch {
         // 일정 로드 실패 — 경기 섹션만 생략
+      } finally {
+        setGameLoading(false);
       }
     }
 
@@ -211,7 +239,7 @@ export default function HomePage() {
 
   return (
     <>
-      <main className="page-gradient flex flex-1 flex-col px-5 pb-28 pt-8">
+      <main className="page-gradient flex flex-1 flex-col px-5 pt-8 pb-[calc(4rem+4.25rem+max(1.5rem,env(safe-area-inset-bottom))+1rem)]">
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
           {/* 헤더 — 마스코트는 작게 한 곳만 */}
           <header className="mb-7 flex items-start justify-between gap-3">
@@ -234,8 +262,10 @@ export default function HomePage() {
           </header>
 
           {/* 오늘/다가오는 내 팀 경기 */}
-          {myGame && opponentTeam ? (
-            <section className="glass-card mb-3 p-5">
+          {gameLoading ? (
+            <TodayGameSkeleton />
+          ) : myGame && opponentTeam ? (
+            <section className="glass-card mb-3 min-h-[152px] p-5">
               <div className="flex items-start justify-between gap-2">
                 <p className="text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                   {myGame.game.date === formatDate(new Date())
@@ -367,21 +397,30 @@ export default function HomePage() {
             </section>
           ) : null}
 
-          <div className="mt-auto space-y-3 pt-1">
-            <Link
-              href="/record/new"
-              className="flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-accent text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-accent-hover active:scale-[0.99]"
-            >
-              오늘의 직관 기록하기
-            </Link>
-            {recentRecords.length === 0 ? (
-              <p className="text-center text-sm text-text-tertiary">
-                아직 기록이 없어요. 첫 직관을 남겨보세요!
-              </p>
-            ) : null}
-          </div>
+          {recentRecords.length === 0 ? (
+            <p className="mt-2 text-center text-sm text-text-tertiary">
+              아직 기록이 없어요. 첫 직관을 남겨보세요!
+            </p>
+          ) : null}
         </div>
       </main>
+
+      {/* 하단 고정 CTA — 탭바 바로 위, 스크롤과 무관하게 항상 접근 */}
+      <div
+        className="fixed inset-x-0 z-40 mx-auto max-w-md px-5"
+        style={{
+          bottom:
+            "calc(4rem + max(1.5rem, env(safe-area-inset-bottom)) + 0.625rem)",
+        }}
+      >
+        <Link
+          href="/record/new"
+          className="flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-accent text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-accent-hover active:scale-[0.99]"
+        >
+          오늘의 직관 기록하기
+        </Link>
+      </div>
+
       <BottomNav variant="glass" />
     </>
   );
