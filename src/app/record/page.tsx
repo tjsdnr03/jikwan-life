@@ -3,52 +3,41 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus } from "lucide-react";
+import { Image as ImageIcon, Plus } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
-import { TeamMascot } from "@/components/team/team-mascot";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
-import { winRate } from "@/lib/utils";
+import { displayDate, resultLabel, winRate } from "@/lib/utils";
 import type {
   GameResult,
   Record as GameRecord,
   StadiumCode,
 } from "@/types";
 
-/** 'YYYY-MM-DD' → '2026.06.07 토' */
-function formatRecordDate(isoDate: string): string {
-  const date = new Date(isoDate);
-  const days = ["일", "월", "화", "수", "목", "금", "토"];
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}.${m}.${d} ${days[date.getDay()]}`;
-}
-
-function resultBadgeText(result: GameResult): string {
-  switch (result) {
-    case "win":
-      return "승리";
-    case "loss":
-      return "패배";
-    case "draw":
-      return "무승부";
-  }
-}
-
 function resultBadgeClass(result: GameResult): string {
   const base =
-    "shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold";
+    "shrink-0 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold";
   switch (result) {
     case "win":
-      return `${base} bg-emerald-50 text-emerald-600`;
+      return `${base} bg-accent-bg text-accent`;
     case "loss":
-      return `${base} bg-red-50 text-red-500`;
+      return `${base} bg-surface-subtle text-text-secondary`;
     case "draw":
-      return `${base} bg-slate-100 text-slate-500`;
+      return `${base} bg-surface-subtle text-text-tertiary`;
   }
+}
+
+/** 팀 구분용 작은 색 점 (홈과 동일) */
+function TeamDot({ color }: { color: string }) {
+  return (
+    <span
+      className="inline-block h-2 w-2 shrink-0 rounded-full ring-2 ring-white/60"
+      style={{ backgroundColor: color }}
+      aria-hidden
+    />
+  );
 }
 
 /**
@@ -100,8 +89,8 @@ export default function RecordListPage() {
 
   if (loading) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-[#EBF2FD]">
-        <p className="text-sm text-slate-400">불러오는 중...</p>
+      <main className="page-gradient flex flex-1 items-center justify-center">
+        <p className="text-sm text-text-tertiary">불러오는 중...</p>
       </main>
     );
   }
@@ -112,14 +101,14 @@ export default function RecordListPage() {
 
   return (
     <>
-      <main className="flex flex-1 flex-col bg-[#EBF2FD] px-6 pb-28 pt-8">
+      <main className="page-gradient flex flex-1 flex-col px-5 pb-28 pt-8">
         <div className="mx-auto w-full max-w-md">
           {/* 헤더 */}
           <header className="mb-4 flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-slate-800">직관 기록</h1>
+            <h1 className="text-2xl font-bold text-text-primary">직관 기록</h1>
             <Link
               href="/record/new"
-              className="flex items-center gap-1 rounded-xl bg-[#B8D4F8] px-3 py-2 text-sm font-semibold text-[#1A56DB] transition-colors hover:bg-[#a5c7f5] active:scale-[0.99]"
+              className="flex items-center gap-1 rounded-[var(--radius-md)] bg-accent-bg px-3 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent-bg-strong active:scale-[0.99]"
             >
               <Plus size={16} />
               새 기록
@@ -128,11 +117,11 @@ export default function RecordListPage() {
 
           {records.length > 0 ? (
             <>
-              <p className="mb-4 text-sm text-slate-500">
+              <p className="mb-4 text-sm text-text-secondary">
                 총 {records.length}회 직관 | 승률 {winRatePercent}%
               </p>
 
-              <ul className="space-y-3">
+              <ul className="space-y-2">
                 {records.map((record) => (
                   <RecordCard key={record.id} record={record} />
                 ))}
@@ -140,7 +129,7 @@ export default function RecordListPage() {
             </>
           ) : (
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <p className="text-base text-slate-500">
+              <p className="text-base text-text-secondary">
                 아직 직관 기록이 없어요
               </p>
               <Link href="/record/new" className="mt-6 w-full">
@@ -150,7 +139,7 @@ export default function RecordListPage() {
           )}
         </div>
       </main>
-      <BottomNav />
+      <BottomNav variant="glass" />
     </>
   );
 }
@@ -159,7 +148,9 @@ function RecordCard({ record }: { record: GameRecord }) {
   const myTeam = getTeam(record.my_team);
   const opponentTeam = getTeam(record.opponent_team);
   const stadium = getStadium(record.stadium as StadiumCode);
-  const thumbnail = record.photos?.[0];
+  const photos = record.photos ?? [];
+  const thumbnail = photos[0];
+  const photoCount = photos.length;
 
   const hasScore =
     record.my_score !== null && record.opponent_score !== null;
@@ -168,53 +159,73 @@ function RecordCard({ record }: { record: GameRecord }) {
     <li>
       <Link
         href={`/record/${record.id}`}
-        className="block rounded-2xl bg-white p-4 shadow-sm transition-colors active:bg-slate-50"
+        className="glass-card block p-4 transition-opacity active:opacity-80"
       >
+        {/* 최상단: 날짜(좌) · 승/패 배지(우) — 사진 유무와 무관하게 고정 */}
         <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-semibold text-slate-700">
-            {formatRecordDate(record.game_date)}
+          <p className="min-w-0 text-sm font-semibold text-text-primary">
+            {displayDate(record.game_date)}
           </p>
           {record.result ? (
             <span className={resultBadgeClass(record.result)}>
-              {resultBadgeText(record.result)}
+              {resultLabel(record.result)}
             </span>
           ) : null}
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
-          <TeamMascot team={myTeam} size="md" />
-          <span className="text-sm font-medium text-slate-400">vs</span>
-          <TeamMascot team={opponentTeam} size="md" />
-          {hasScore ? (
-            <span className="ml-1 text-base font-bold text-slate-800">
-              {record.my_score} : {record.opponent_score}
-            </span>
-          ) : null}
-        </div>
+        {/* 본문: 텍스트(좌) · 썸네일(우) */}
+        <div className="mt-2 flex gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <div className="flex items-center gap-1.5">
+                <TeamDot color={myTeam.color} />
+                <span className="text-sm font-semibold text-text-primary">
+                  {myTeam.short}
+                </span>
+              </div>
+              {hasScore ? (
+                <span className="text-base font-bold tabular-nums text-text-primary">
+                  {record.my_score} : {record.opponent_score}
+                </span>
+              ) : (
+                <span className="text-sm font-semibold text-text-tertiary">
+                  vs
+                </span>
+              )}
+              <div className="flex items-center gap-1.5">
+                <TeamDot color={opponentTeam.color} />
+                <span className="text-sm font-semibold text-text-primary">
+                  {opponentTeam.short}
+                </span>
+              </div>
+            </div>
 
-        <p className="mt-2 text-xs text-slate-400">{stadium.name}</p>
+            <p className="mt-1.5 text-xs text-text-tertiary">{stadium.name}</p>
 
-        {(record.comment || thumbnail) && (
-          <div className="mt-3 flex items-end justify-between gap-3">
             {record.comment ? (
-              <p className="line-clamp-1 flex-1 text-sm text-slate-500">
+              <p className="mt-1.5 line-clamp-1 text-sm text-text-secondary">
                 {record.comment}
               </p>
-            ) : (
-              <span className="flex-1" />
-            )}
-            {thumbnail ? (
-              <div className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-slate-100">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={thumbnail}
-                  alt="직관 사진"
-                  className="h-full w-full object-cover"
-                />
-              </div>
             ) : null}
           </div>
-        )}
+
+          {thumbnail ? (
+            <div className="relative h-[68px] w-[68px] shrink-0 self-center overflow-hidden rounded-[var(--radius-md)] bg-surface-subtle">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={thumbnail}
+                alt="직관 사진"
+                className="h-full w-full object-cover"
+              />
+              {photoCount >= 2 ? (
+                <span className="absolute bottom-1 right-1 flex items-center gap-0.5 rounded-md bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                  <ImageIcon size={10} strokeWidth={2.2} aria-hidden />
+                  {photoCount}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </Link>
     </li>
   );
