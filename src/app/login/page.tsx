@@ -8,6 +8,15 @@ type Step = 1 | 2;
 
 const OTP_LENGTH = 8;
 
+const INPUT_CLASS =
+  "h-14 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 text-base text-text-primary outline-none backdrop-blur-sm transition-colors placeholder:text-text-tertiary focus:border-accent focus:ring-2 focus:ring-[var(--accent-border)]";
+
+const OTP_INPUT_CLASS =
+  "h-16 w-full rounded-[var(--radius-lg)] border border-[var(--glass-border)] bg-[var(--glass-bg)] px-4 text-center text-3xl font-bold tracking-[0.3em] text-text-primary outline-none backdrop-blur-sm transition-colors placeholder:text-text-tertiary placeholder:tracking-[0.3em] focus:border-accent focus:ring-2 focus:ring-[var(--accent-border)]";
+
+const PRIMARY_BTN_CLASS =
+  "mt-4 flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-[var(--accent)] text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-hover)] active:scale-[0.99] disabled:opacity-60";
+
 function mapOtpError(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("expired") || lower.includes("만료")) {
@@ -132,24 +141,23 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center bg-[#EBF2FD] px-6">
-      <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
-        {/* 심볼 */}
-        <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-[#B8D4F8] text-4xl shadow-sm">
+    <main className="page-gradient flex flex-1 flex-col items-center justify-center px-5 py-12">
+      <div className="glass-card mx-auto w-full max-w-md p-8 text-center">
+        <div className="glass mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-[var(--radius-xl)] text-3xl">
           ⚾️
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight text-[#1A56DB]">
+        <h1 className="text-2xl font-bold tracking-tight text-text-primary">
           직관생활
         </h1>
-        <p className="mt-3 text-base leading-6 text-slate-600">
+        <p className="mt-3 text-sm leading-6 text-text-secondary">
           이메일로 간편하게 시작하고
           <br />
           나만의 직관 기록을 남겨보세요
         </p>
 
         {step === 1 ? (
-          <form onSubmit={handleSendCode} className="mt-10 w-full">
+          <form onSubmit={handleSendCode} className="mt-8 w-full text-left">
             <input
               type="email"
               value={email}
@@ -157,25 +165,27 @@ export default function LoginPage() {
               placeholder="이메일을 입력하세요"
               autoComplete="email"
               required
-              className="h-14 w-full rounded-2xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+              className={INPUT_CLASS}
             />
 
             <button
               type="submit"
               disabled={loading || !email}
-              className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-[#1A56DB] text-base font-semibold text-white shadow-md transition-colors hover:bg-[#1547b8] active:scale-[0.99] disabled:opacity-60"
+              className={PRIMARY_BTN_CLASS}
             >
               {loading ? "전송 중..." : "인증 코드 받기"}
             </button>
 
             {error ? (
-              <p className="mt-4 text-sm font-medium text-rose-500">{error}</p>
+              <p className="mt-4 text-center text-sm font-medium text-rose-500">
+                {error}
+              </p>
             ) : null}
           </form>
         ) : (
-          <form onSubmit={handleVerify} className="mt-10 w-full">
-            <p className="mb-6 text-sm leading-relaxed text-slate-600">
-              <span className="font-semibold text-slate-800">{email}</span>
+          <form onSubmit={handleVerify} className="mt-8 w-full text-left">
+            <p className="mb-6 text-center text-sm leading-relaxed text-text-secondary">
+              <span className="font-semibold text-text-primary">{email}</span>
               으로 인증 코드를 보냈어요
             </p>
 
@@ -188,28 +198,30 @@ export default function LoginPage() {
               onChange={(e) => handleCodeChange(e.target.value)}
               maxLength={OTP_LENGTH}
               placeholder="········"
-              className="h-16 w-full rounded-2xl border border-slate-200 bg-white px-4 text-center text-3xl font-bold tracking-[0.3em] text-slate-800 outline-none transition-colors placeholder:text-slate-300 placeholder:tracking-[0.3em] focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+              className={OTP_INPUT_CLASS}
               aria-label="인증 코드"
             />
 
             <button
               type="submit"
               disabled={loading || code.length !== OTP_LENGTH}
-              className="mt-4 flex h-14 w-full items-center justify-center rounded-2xl bg-[#1A56DB] text-base font-semibold text-white shadow-md transition-colors hover:bg-[#1547b8] active:scale-[0.99] disabled:opacity-60"
+              className={PRIMARY_BTN_CLASS}
             >
               {loading ? "확인 중..." : "로그인"}
             </button>
 
             {error ? (
-              <p className="mt-4 text-sm font-medium text-rose-500">{error}</p>
+              <p className="mt-4 text-center text-sm font-medium text-rose-500">
+                {error}
+              </p>
             ) : null}
 
-            <div className="mt-5 flex flex-col gap-2">
+            <div className="mt-5 flex flex-col gap-2 text-center">
               <button
                 type="button"
                 onClick={handleResendCode}
                 disabled={resendLoading || loading}
-                className="text-sm font-medium text-[#1A56DB] disabled:opacity-50"
+                className="text-sm font-medium text-accent disabled:opacity-50"
               >
                 {resendLoading ? "재전송 중..." : "코드 재전송"}
               </button>
@@ -217,7 +229,7 @@ export default function LoginPage() {
                 type="button"
                 onClick={handleBackToEmail}
                 disabled={loading}
-                className="text-sm font-medium text-slate-500 underline-offset-2 hover:underline"
+                className="text-sm font-medium text-text-secondary underline-offset-2 hover:underline"
               >
                 다른 이메일로 다시 받기
               </button>
@@ -225,7 +237,7 @@ export default function LoginPage() {
           </form>
         )}
 
-        <p className="mt-8 text-xs text-slate-400">
+        <p className="mt-8 text-xs text-text-tertiary">
           카카오 로그인은 준비 중입니다
         </p>
       </div>
