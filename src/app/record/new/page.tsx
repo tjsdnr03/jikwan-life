@@ -57,8 +57,9 @@ export default function NewRecordPage() {
 
     async function load() {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+      const user = session?.user;
 
       if (!user) {
         router.replace("/login");
@@ -183,8 +184,9 @@ export default function NewRecordPage() {
 
     const supabase = createClient();
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
 
     if (!user) {
       router.replace("/login");

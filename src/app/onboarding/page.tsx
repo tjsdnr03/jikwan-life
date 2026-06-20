@@ -22,8 +22,8 @@ export default function OnboardingPage() {
   // 마운트 시 로그인 확인 — 세션 없으면 로그인으로
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (!user) router.replace("/login");
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session?.user) router.replace("/login");
     });
   }, [router]);
 
@@ -36,8 +36,9 @@ export default function OnboardingPage() {
 
     // 현재 로그인한 유저 확인
     const {
-      data: { user },
-    } = await supabase.auth.getUser();
+      data: { session },
+    } = await supabase.auth.getSession();
+    const user = session?.user;
 
     if (!user) {
       // 세션이 없으면 로그인부터

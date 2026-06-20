@@ -7,7 +7,7 @@ import {
  * 브라우저(클라이언트 컴포넌트)용 Supabase 클라이언트
  *
  * 세션 저장은 localStorage 를 사용한다.
- * - 이 앱은 모든 인증 가드가 클라이언트 사이드(getUser)라 서버가 세션을 읽을
+ * - 이 앱은 모든 인증 가드가 클라이언트 사이드(getSession)라 서버가 세션을 읽을
  *   필요가 없으므로 쿠키(@supabase/ssr) 기반이 불필요하다.
  * - iOS standalone PWA(WKWebView)에서 JS 가 쓴 쿠키는 ITP 정책상 만료가 7일로
  *   강제 제한되고 재실행 간 보존이 불안정하다. localStorage 는 설치형 PWA 에서
