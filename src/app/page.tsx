@@ -1,11 +1,41 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase";
 
 /**
  * 랜딩 페이지 (/)
- * 비로그인 진입점 — 서비스 소개 + 시작하기 CTA
- * 모바일 퍼스트, 파스텔 블루 포인트
+ * - PWA 는 종료 후 재실행 시 (홈 화면 아이콘에 따라) 이 URL 로 열릴 수 있으므로,
+ *   진입 시 세션을 확인해 로그인 상태면 /home 으로 보낸다.
+ *   (프로필 유무에 따른 /onboarding 분기는 /home 가드가 처리)
+ * - getSession() 은 localStorage 기반(네트워크 불필요)이라 콜드 스타트에서도 안전.
+ * - 비로그인 사용자에게만 서비스 소개 + 시작하기 CTA 를 보여준다.
  */
 export default function Home() {
+  const router = useRouter();
+  const [checking, setChecking] = useState(true);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        router.replace("/home");
+      } else {
+        setChecking(false);
+      }
+    });
+  }, [router]);
+
+  if (checking) {
+    return (
+      <main className="flex flex-1 items-center justify-center bg-[#EBF2FD]">
+        <p className="text-sm text-slate-400">불러오는 중...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center bg-[#EBF2FD] px-6 py-12">
       <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">

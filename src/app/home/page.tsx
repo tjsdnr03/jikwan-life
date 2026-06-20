@@ -6,7 +6,6 @@ import Link from "next/link";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
-import { authLog } from "@/lib/authDebug";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
 import { cn, displayDate, formatDate, resultLabel, winRate } from "@/lib/utils";
@@ -173,33 +172,23 @@ export default function HomePage() {
     const supabase = createClient();
 
     async function load() {
-      authLog("home: load() 시작");
       const {
         data: { session },
-        error: sessionError,
       } = await supabase.auth.getSession();
       const user = session?.user;
-      authLog(
-        `home: getSession → user=${user ? user.id.slice(0, 8) : "null"} err=${sessionError?.message ?? "-"}`
-      );
 
       if (!user) {
-        authLog("home: 세션 없음 → /login");
         router.replace("/login");
         return;
       }
 
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData } = await supabase
         .from("users")
         .select("nickname, my_team")
         .eq("id", user.id)
         .maybeSingle();
-      authLog(
-        `home: profile 조회 → data=${profileData ? "있음" : "null"} err=${profileError?.message ?? "-"}`
-      );
 
       if (!profileData) {
-        authLog("home: 프로필 null → /onboarding");
         router.replace("/onboarding");
         return;
       }
