@@ -44,14 +44,14 @@ function formatSelectedLabel(date: string): string {
   return `${Number(month)}월 ${Number(day)}일`;
 }
 
-function resultDotColor(result: GameResult): string {
+function resultDotClass(result: GameResult): string {
   switch (result) {
     case "win":
-      return "bg-emerald-500";
+      return "bg-accent";
     case "loss":
-      return "bg-red-400";
+      return "bg-text-secondary";
     case "draw":
-      return "bg-slate-400";
+      return "bg-surface-subtle ring-1 ring-[var(--border-subtle)]";
   }
 }
 
@@ -222,137 +222,141 @@ export default function CalendarPage() {
 
   return (
     <>
-      <main className="flex flex-1 flex-col bg-white px-6 pb-28 pt-8">
+      <main className="page-gradient flex flex-1 flex-col px-5 pb-28 pt-8">
         <div className="mx-auto w-full max-w-md">
           {/* 월 헤더 */}
-          <header className="mb-6 flex items-center justify-between">
+          <header className="mb-4 flex items-center justify-between">
             <button
               type="button"
               onClick={goPrevMonth}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-50"
+              className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] text-text-tertiary transition-colors hover:bg-surface-subtle"
               aria-label="이전 달"
             >
               <ChevronLeft size={22} />
             </button>
-            <h1 className="text-xl font-bold text-slate-800">
+            <h1 className="text-xl font-bold text-text-primary">
               {year}년 {month}월
             </h1>
             <button
               type="button"
               onClick={goNextMonth}
-              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-50"
+              className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] text-text-tertiary transition-colors hover:bg-surface-subtle"
               aria-label="다음 달"
             >
               <ChevronRight size={22} />
             </button>
           </header>
 
-          {/* 요일 헤더 */}
-          <div className="mb-2 grid grid-cols-7 text-center">
-            {WEEKDAYS.map((day, index) => (
-              <span
-                key={day}
-                className={cn(
-                  "py-2 text-xs font-semibold",
-                  index === 0 && "text-red-400",
-                  index === 6 && "text-[#1A56DB]"
-                )}
-              >
-                {day}
-              </span>
-            ))}
-          </div>
-
-          {/* 날짜 그리드 */}
-          <div className="grid grid-cols-7 gap-y-1">
-            {calendarCells.map((day, index) => {
-              if (day === null) {
-                return <div key={`empty-${index}`} className="aspect-square" />;
-              }
-
-              const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-              const record = recordMap.get(dateKey);
-              const myGame = myGameMap.get(dateKey);
-              const isToday = dateKey === TODAY;
-              const isSelected = dateKey === selectedDate;
-              const interactive = Boolean(record || myGame);
-
-              return (
-                <button
-                  key={dateKey}
-                  type="button"
-                  onClick={() => handleDateClick(dateKey)}
+          {/* 캘린더 */}
+          <div className="glass-card mb-3 p-3">
+            {/* 요일 헤더 */}
+            <div className="mb-1 grid grid-cols-7 text-center">
+              {WEEKDAYS.map((day, index) => (
+                <span
+                  key={day}
                   className={cn(
-                    "relative flex aspect-square flex-col items-center justify-start gap-0.5 rounded-xl pt-1 text-sm transition-colors",
-                    isToday && "border-2 border-[#1A56DB]",
-                    isSelected && "bg-[#EBF2FD]",
-                    !isSelected && !isToday && "hover:bg-slate-50",
-                    interactive ? "cursor-pointer" : "cursor-default"
+                    "py-2 text-xs font-semibold",
+                    index === 0 && "text-red-400",
+                    index === 6 && "text-accent"
                   )}
-                  aria-label={`${day}일${myGame ? `, ${getTeam(myGame.opponent).name}전` : ""}${record?.result ? `, ${resultLabel(record.result)}` : ""}`}
                 >
-                  <span
-                    className={cn(
-                      "text-xs font-medium leading-none",
-                      isToday ? "text-[#1A56DB]" : "text-slate-700"
-                    )}
-                  >
-                    {day}
-                  </span>
+                  {day}
+                </span>
+              ))}
+            </div>
 
-                  {/* 내 팀 경기: 상대팀 캐릭터 (홈=파란/원정=빨간 테두리) */}
-                  {myGame ? (
-                    <span className="relative">
-                      <TeamMascot
-                        team={myGame.opponent}
-                        size="sm"
-                        className={cn(
-                          "border-2",
-                          myGame.isHome
-                            ? "border-[#1A56DB]"
-                            : "border-red-400"
-                        )}
-                      />
-                      {/* 직관 기록 승/패는 캐릭터 위 작은 dot 으로 함께 표시 */}
-                      {record?.result ? (
-                        <span
-                          className={cn(
-                            "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white",
-                            resultDotColor(record.result)
-                          )}
-                        />
-                      ) : null}
-                    </span>
-                  ) : record?.result ? (
+            {/* 날짜 그리드 */}
+            <div className="grid grid-cols-7 gap-y-1">
+              {calendarCells.map((day, index) => {
+                if (day === null) {
+                  return (
+                    <div key={`empty-${index}`} className="aspect-square" />
+                  );
+                }
+
+                const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                const record = recordMap.get(dateKey);
+                const myGame = myGameMap.get(dateKey);
+                const isToday = dateKey === TODAY;
+                const isSelected = dateKey === selectedDate;
+                const interactive = Boolean(record || myGame);
+
+                return (
+                  <button
+                    key={dateKey}
+                    type="button"
+                    onClick={() => handleDateClick(dateKey)}
+                    className={cn(
+                      "relative flex aspect-square flex-col items-center justify-start gap-0.5 rounded-xl pt-1 text-sm transition-colors",
+                      isSelected && "bg-accent-bg",
+                      !isSelected && interactive && "hover:bg-surface-subtle",
+                      interactive ? "cursor-pointer" : "cursor-default"
+                    )}
+                    aria-label={`${day}일${isToday ? ", 오늘" : ""}${myGame ? `, ${getTeam(myGame.opponent).name}전` : ""}${record?.result ? `, ${resultLabel(record.result)}` : ""}`}
+                  >
                     <span
                       className={cn(
-                        "mt-1 h-1.5 w-1.5 rounded-full",
-                        resultDotColor(record.result)
+                        "flex h-5 w-5 items-center justify-center rounded-full text-xs leading-none",
+                        isToday
+                          ? "bg-accent font-bold text-white"
+                          : "font-medium text-text-primary"
                       )}
-                    />
-                  ) : null}
-                </button>
-              );
-            })}
+                    >
+                      {day}
+                    </span>
+
+                    {/* 내 팀 경기: 상대팀 캐릭터 (홈=accent / 원정=회색 테두리) */}
+                    {myGame ? (
+                      <span className="relative">
+                        <TeamMascot
+                          team={myGame.opponent}
+                          size="sm"
+                          className={cn(
+                            "border-2",
+                            myGame.isHome
+                              ? "border-accent"
+                              : "border-text-secondary"
+                          )}
+                        />
+                        {record?.result ? (
+                          <span
+                            className={cn(
+                              "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white",
+                              resultDotClass(record.result)
+                            )}
+                          />
+                        ) : null}
+                      </span>
+                    ) : record?.result ? (
+                      <span
+                        className={cn(
+                          "mt-1 h-1.5 w-1.5 rounded-full",
+                          resultDotClass(record.result)
+                        )}
+                      />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* 선택된 날짜 상세 */}
-          <div className="mt-6 space-y-3">
+          <div className="space-y-2">
             {selectedDate && (selectedMyGame || selectedRecord) ? (
               <>
-                {/* 내 팀 경기 정보 */}
                 {selectedMyGame ? (
-                  <div className="rounded-2xl bg-[#EBF2FD] p-4">
+                  <div className="glass-card p-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold text-[#1A56DB]">
+                      <span className="text-sm font-semibold text-text-primary">
                         {formatSelectedLabel(selectedDate)}
                       </span>
                       <span
                         className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-semibold",
+                          "rounded-full px-2 py-0.5 text-[10px] font-semibold",
                           selectedMyGame.isHome
-                            ? "bg-[#1A56DB]/10 text-[#1A56DB]"
-                            : "bg-red-400/15 text-red-500"
+                            ? "bg-accent-bg text-accent"
+                            : "bg-surface-subtle text-text-secondary"
                         )}
                       >
                         {selectedMyGame.isHome ? "홈경기" : "원정경기"}
@@ -362,50 +366,53 @@ export default function CalendarPage() {
                     <div className="mt-3 flex items-center justify-center gap-3">
                       <div className="flex flex-col items-center gap-1">
                         <TeamMascot team={myTeam!} size="md" />
-                        <span className="text-xs font-medium text-slate-600">
+                        <span className="text-xs font-medium text-text-secondary">
                           {myTeamName}
                         </span>
                       </div>
                       {selectedMyGame.myScore !== null &&
                       selectedMyGame.opponentScore !== null ? (
-                        <span className="text-lg font-bold text-slate-800">
-                          {selectedMyGame.myScore} : {selectedMyGame.opponentScore}
+                        <span className="text-lg font-bold tabular-nums text-text-primary">
+                          {selectedMyGame.myScore} :{" "}
+                          {selectedMyGame.opponentScore}
                         </span>
                       ) : (
-                        <span className="text-sm font-semibold text-slate-400">
+                        <span className="text-sm font-semibold text-text-tertiary">
                           vs
                         </span>
                       )}
                       <div className="flex flex-col items-center gap-1">
-                        <TeamMascot team={selectedMyGame.opponent} size="md" />
-                        <span className="text-xs font-medium text-slate-600">
+                        <TeamMascot
+                          team={selectedMyGame.opponent}
+                          size="md"
+                        />
+                        <span className="text-xs font-medium text-text-secondary">
                           {getTeam(selectedMyGame.opponent).name}
                         </span>
                       </div>
                     </div>
 
-                    <p className="mt-3 text-center text-xs text-slate-500">
+                    <p className="mt-3 text-center text-xs text-text-secondary">
                       {getStadium(selectedMyGame.game.stadium).name} ·{" "}
                       {statusLabel(selectedMyGame.game.status)}
                     </p>
                   </div>
                 ) : null}
 
-                {/* 직관 기록 정보 */}
                 {selectedRecord ? (
-                  <div className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                    <p className="mb-1 text-xs font-semibold text-slate-400">
+                  <div className="glass-card p-4">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
                       내 직관 기록
                     </p>
-                    <p className="text-sm text-slate-700">
+                    <p className="text-sm text-text-primary">
                       {summarize(selectedRecord, myTeamName)}
                     </p>
                   </div>
                 ) : null}
               </>
             ) : (
-              <div className="min-h-[72px] rounded-2xl bg-[#EBF2FD] p-4">
-                <p className="text-sm text-slate-400">
+              <div className="glass-card min-h-[72px] p-4">
+                <p className="text-sm text-text-tertiary">
                   경기나 직관 기록이 있는 날짜를 탭해보세요
                 </p>
               </div>
@@ -413,32 +420,34 @@ export default function CalendarPage() {
           </div>
 
           {/* 범례 */}
-          <div className="mt-5 space-y-2 text-xs text-slate-400">
+          <div className="mt-5 space-y-2 text-xs text-text-tertiary">
             <div className="flex justify-center gap-4">
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-emerald-500" />승
+                <span className="h-2 w-2 rounded-full bg-accent" />승
               </span>
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-red-400" />패
+                <span className="h-2 w-2 rounded-full bg-text-secondary" />
+                패
               </span>
               <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-slate-400" />무
+                <span className="h-2 w-2 rounded-full bg-surface-subtle ring-1 ring-[var(--border-subtle)]" />
+                무
               </span>
             </div>
             <div className="flex justify-center gap-4">
               <span className="flex items-center gap-1">
-                <span className="h-3 w-3 rounded-md border-2 border-[#1A56DB]" />
+                <span className="h-3 w-3 rounded-md border-2 border-accent" />
                 홈경기
               </span>
               <span className="flex items-center gap-1">
-                <span className="h-3 w-3 rounded-md border-2 border-red-400" />
+                <span className="h-3 w-3 rounded-md border-2 border-text-secondary" />
                 원정경기
               </span>
             </div>
           </div>
         </div>
       </main>
-      <BottomNav />
+      <BottomNav variant="glass" />
     </>
   );
 }
