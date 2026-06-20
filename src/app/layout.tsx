@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import { AuthDebugOverlay } from "@/components/debug/AuthDebugOverlay";
 
 export const metadata: Metadata = {
   title: "직관생활 — KBO 직관 기록 & 카드",
@@ -42,7 +43,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko" className="h-full antialiased">
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/* 임시 진단 오버레이 — 세션 문제 진단 후 제거 */}
+        <AuthDebugOverlay />
+        {children}
+      </body>
     </html>
   );
 }
