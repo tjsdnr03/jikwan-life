@@ -9,8 +9,24 @@ import StoryCard, {
   type InfoPosition,
   type OverlayLevel,
 } from "@/components/card/StoryCard";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+const CONTROL_PANEL = "glass-card space-y-5 p-5";
+const SECTION_LABEL = "mb-3 text-sm font-semibold text-text-primary";
+const TOGGLE_BTN =
+  "h-11 rounded-[var(--radius-md)] border-2 text-sm font-semibold transition-all";
+const CHIP_SELECTED =
+  "border-accent bg-accent-bg text-accent ring-2 ring-[var(--accent-border)]";
+const CHIP_DEFAULT =
+  "border-transparent bg-surface-subtle text-text-secondary";
+const PHOTO_SELECT_BTN =
+  "flex h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--glass-border)] text-sm font-semibold text-accent transition-colors hover:border-accent hover:bg-accent-bg";
+const PHOTO_REMOVE_BTN =
+  "flex h-11 items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-transparent bg-surface-subtle px-4 text-sm font-semibold text-text-secondary transition-colors hover:border-rose-200 hover:bg-rose-50 hover:text-rose-500";
+const PRIMARY_BTN =
+  "flex h-14 w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] bg-[var(--accent)] text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-hover)] active:scale-[0.99] disabled:opacity-60";
+const SECONDARY_BTN =
+  "flex h-14 w-full items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-[var(--border-subtle)] bg-[var(--surface)] text-base font-semibold text-text-primary shadow-[var(--shadow-soft)] transition-colors hover:bg-surface-subtle active:scale-[0.99] disabled:opacity-60";
 
 /** 정규화된 이미지 결과 (blob URL + 화면 표시 기준 크기) */
 interface NormalizedImage {
@@ -329,10 +345,10 @@ export default function CardEditor({
       </div>
 
       {/* 컨트롤 */}
-      <div className="space-y-5 rounded-2xl bg-white p-5 shadow-sm">
+      <div className={CONTROL_PANEL}>
         {/* 사진 */}
         <section>
-          <h3 className="mb-3 text-sm font-semibold text-slate-700">사진</h3>
+          <h3 className={SECTION_LABEL}>사진</h3>
 
           {showRecordThumbnails ? (
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
@@ -345,10 +361,10 @@ export default function CardEditor({
                     type="button"
                     onClick={() => handleSelectRecordPhoto(url)}
                     className={cn(
-                      "relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
+                      "relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--radius-md)] border-2 transition-all",
                       selected
-                        ? "border-[#1A56DB] ring-2 ring-[#1A56DB]/20"
-                        : "border-slate-100"
+                        ? "border-accent ring-2 ring-[var(--accent-border)]"
+                        : "border-transparent"
                     )}
                     aria-label={`기록 사진 ${index + 1} 선택`}
                     aria-pressed={selected}
@@ -369,7 +385,7 @@ export default function CardEditor({
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#B8D4F8] bg-[#EBF2FD] text-sm font-semibold text-[#1A56DB] transition-colors hover:border-[#1A56DB] hover:bg-[#dfeafb]"
+              className={PHOTO_SELECT_BTN}
             >
               <ImagePlus size={18} />
               사진 선택
@@ -378,7 +394,7 @@ export default function CardEditor({
               <button
                 type="button"
                 onClick={handleRemovePhoto}
-                className="flex h-11 items-center justify-center gap-1 rounded-xl border-2 border-slate-100 bg-slate-50 px-4 text-sm font-semibold text-slate-500 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500"
+                className={PHOTO_REMOVE_BTN}
               >
                 <X size={16} />
                 제거
@@ -393,7 +409,7 @@ export default function CardEditor({
             className="hidden"
           />
           {photoUrl ? (
-            <p className="mt-2 text-xs text-slate-400">
+            <p className="mt-2 text-xs text-text-tertiary">
               사진 비율에 맞춰 모드를 추천했어요. 필요하면 직접 바꿀 수 있어요.
             </p>
           ) : null}
@@ -401,16 +417,14 @@ export default function CardEditor({
 
         {/* 모드 */}
         <section>
-          <h3 className="mb-3 text-sm font-semibold text-slate-700">모드</h3>
+          <h3 className={SECTION_LABEL}>모드</h3>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={() => setMode("fill")}
               className={cn(
-                "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
-                mode === "fill"
-                  ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
-                  : "border-slate-100 bg-slate-50 text-slate-500"
+                TOGGLE_BTN,
+                mode === "fill" ? CHIP_SELECTED : CHIP_DEFAULT
               )}
             >
               채우기
@@ -419,10 +433,8 @@ export default function CardEditor({
               type="button"
               onClick={() => setMode("matte")}
               className={cn(
-                "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
-                mode === "matte"
-                  ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
-                  : "border-slate-100 bg-slate-50 text-slate-500"
+                TOGGLE_BTN,
+                mode === "matte" ? CHIP_SELECTED : CHIP_DEFAULT
               )}
             >
               여백
@@ -433,9 +445,7 @@ export default function CardEditor({
         {mode === "fill" ? (
           <>
             <section>
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">
-                정보 위치
-              </h3>
+              <h3 className={SECTION_LABEL}>정보 위치</h3>
               <div className="grid grid-cols-3 gap-2">
                 {(
                   [
@@ -449,10 +459,8 @@ export default function CardEditor({
                     type="button"
                     onClick={() => setInfoPosition(value)}
                     className={cn(
-                      "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
-                      infoPosition === value
-                        ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
-                        : "border-slate-100 bg-slate-50 text-slate-500"
+                      TOGGLE_BTN,
+                      infoPosition === value ? CHIP_SELECTED : CHIP_DEFAULT
                     )}
                   >
                     {label}
@@ -462,9 +470,7 @@ export default function CardEditor({
             </section>
 
             <section>
-              <h3 className="mb-3 text-sm font-semibold text-slate-700">
-                정보 칸 투명도
-              </h3>
+              <h3 className={SECTION_LABEL}>정보 칸 투명도</h3>
               <div className="grid grid-cols-3 gap-2">
                 {(
                   [
@@ -478,10 +484,8 @@ export default function CardEditor({
                     type="button"
                     onClick={() => setOverlayLevel(value)}
                     className={cn(
-                      "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
-                      overlayLevel === value
-                        ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
-                        : "border-slate-100 bg-slate-50 text-slate-500"
+                      TOGGLE_BTN,
+                      overlayLevel === value ? CHIP_SELECTED : CHIP_DEFAULT
                     )}
                   >
                     {label}
@@ -494,7 +498,7 @@ export default function CardEditor({
 
         {/* 배경색 */}
         <section>
-          <h3 className="mb-3 text-sm font-semibold text-slate-700">배경색</h3>
+          <h3 className={SECTION_LABEL}>배경색</h3>
           <div className="flex flex-wrap gap-3">
             {BG_PRESETS.map((preset) => {
               const selected = bgColor === preset.color;
@@ -506,7 +510,7 @@ export default function CardEditor({
                   className={cn(
                     "h-10 w-10 rounded-full border-2 transition-all",
                     selected
-                      ? "border-[#1A56DB] ring-2 ring-[#1A56DB]/20"
+                      ? "border-accent ring-2 ring-[var(--accent-border)]"
                       : "border-transparent"
                   )}
                   style={{ backgroundColor: preset.color }}
@@ -516,22 +520,21 @@ export default function CardEditor({
               );
             })}
           </div>
-          <p className="mt-2 text-xs text-slate-400">
+          <p className="mt-2 text-xs text-text-tertiary">
             배경색 선택 시 여백 모드로 전환됩니다
           </p>
         </section>
 
         {/* 데코 */}
         <section>
-          <h3 className="mb-3 text-sm font-semibold text-slate-700">데코</h3>
+          <h3 className={SECTION_LABEL}>데코</h3>
           <button
             type="button"
             onClick={() => setShowDeco((prev) => !prev)}
             className={cn(
-              "h-11 w-full rounded-xl border-2 text-sm font-semibold transition-all",
-              showDeco
-                ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
-                : "border-slate-100 bg-slate-50 text-slate-500"
+              TOGGLE_BTN,
+              "w-full",
+              showDeco ? CHIP_SELECTED : CHIP_DEFAULT
             )}
           >
             {showDeco ? "데코 끄기" : "데코 켜기"}
@@ -546,14 +549,24 @@ export default function CardEditor({
         </p>
       ) : null}
       <div className="space-y-3">
-        <Button onClick={handleShare} disabled={working}>
-          <Share2 size={18} className="mr-2" />
+        <button
+          type="button"
+          onClick={handleShare}
+          disabled={working}
+          className={PRIMARY_BTN}
+        >
+          <Share2 size={18} />
           {working ? "처리 중..." : "공유"}
-        </Button>
-        <Button variant="secondary" onClick={handleDownload} disabled={working}>
-          <Download size={18} className="mr-2" />
+        </button>
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={working}
+          className={SECONDARY_BTN}
+        >
+          <Download size={18} />
           이미지 저장하기
-        </Button>
+        </button>
       </div>
     </div>
   );

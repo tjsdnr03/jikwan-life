@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, ImagePlus, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { createClient } from "@/lib/supabase";
 import { STADIUM_LIST } from "@/lib/stadiums";
 import { TEAM_LIST, getTeam } from "@/lib/teams";
@@ -14,6 +14,25 @@ import type { Record as GameRecord, StadiumCode, TeamCode } from "@/types";
 const MAX_PHOTOS = 5;
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+const SECTION_CLASS = "glass-card p-4";
+const LABEL = "mb-2 block text-sm font-semibold text-text-primary";
+const LABEL_SM = "mb-2 block text-xs font-medium text-text-tertiary";
+const INPUT_CLASS =
+  "h-12 w-full rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface)] px-4 text-base text-text-primary outline-none transition-colors focus:border-accent focus:ring-2 focus:ring-[var(--accent-border)]";
+const TEXTAREA_CLASS =
+  "w-full resize-none rounded-[var(--radius-md)] border border-[var(--glass-border)] bg-[var(--surface)] px-4 py-3 text-base text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent focus:ring-2 focus:ring-[var(--accent-border)]";
+const CHIP_SELECTED =
+  "border-accent bg-accent-bg ring-2 ring-[var(--accent-border)]";
+const CHIP_DEFAULT = "border-transparent bg-surface-subtle";
+const TOGGLE_SELECTED = "border-accent bg-accent-bg text-accent";
+const TOGGLE_DEFAULT = "border-transparent bg-surface-subtle text-text-secondary";
+const PRIMARY_BTN =
+  "flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-[var(--accent)] text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-hover)] active:scale-[0.99] disabled:opacity-60";
+const BACK_LINK =
+  "glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-accent transition-opacity hover:opacity-80";
+const BOTTOM_NAV_PADDING =
+  "pb-[calc(4rem+max(1.5rem,env(safe-area-inset-bottom))+1rem)]";
 
 /**
  * 직관 기록 수정 (/record/[id]/edit)
@@ -239,43 +258,51 @@ export default function EditRecordPage({
 
   if (loading) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-[#EBF2FD]">
-        <p className="text-sm text-slate-400">불러오는 중...</p>
-      </main>
+      <>
+        <main
+          className={`page-gradient flex flex-1 items-center justify-center ${BOTTOM_NAV_PADDING}`}
+        >
+          <p className="text-sm text-text-tertiary">불러오는 중...</p>
+        </main>
+        <BottomNav variant="glass" />
+      </>
     );
   }
 
   if (error && !myTeamCode) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center bg-[#EBF2FD] px-6">
-        <p className="text-sm text-slate-500">{error}</p>
-        <Link href="/record" className="mt-4 text-sm font-medium text-[#1A56DB]">
-          목록으로 돌아가기
-        </Link>
-      </main>
+      <>
+        <main
+          className={`page-gradient flex flex-1 flex-col items-center justify-center px-5 ${BOTTOM_NAV_PADDING}`}
+        >
+          <p className="text-sm text-text-secondary">{error}</p>
+          <Link href="/record" className="mt-4 text-sm font-medium text-accent">
+            목록으로 돌아가기
+          </Link>
+        </main>
+        <BottomNav variant="glass" />
+      </>
     );
   }
 
   return (
-    <main className="min-h-full bg-[#EBF2FD] pb-10">
-      <div className="mx-auto w-full max-w-md px-6 pt-6">
+    <>
+    <main className={`page-gradient min-h-full ${BOTTOM_NAV_PADDING}`}>
+      <div className="mx-auto w-full max-w-md px-5 pt-8">
         <header className="mb-6 flex items-center gap-3">
           <Link
             href={`/record/${id}`}
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#1A56DB] shadow-sm"
+            className={BACK_LINK}
             aria-label="뒤로가기"
           >
             <ArrowLeft size={22} />
           </Link>
-          <h1 className="text-xl font-bold text-slate-800">기록 수정</h1>
+          <h1 className="text-xl font-bold text-text-primary">기록 수정</h1>
         </header>
 
-        <div className="space-y-6">
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <label
-              htmlFor="game-date"
-              className="mb-2 block text-sm font-semibold text-slate-700"
-            >
+        <div className="space-y-3">
+          <section className={SECTION_CLASS}>
+            <label htmlFor="game-date" className={LABEL}>
               경기 날짜
             </label>
             <input
@@ -283,14 +310,12 @@ export default function EditRecordPage({
               type="date"
               value={gameDate}
               onChange={(e) => setGameDate(e.target.value)}
-              className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+              className={INPUT_CLASS}
             />
           </section>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold text-slate-700">
-              구장 선택
-            </h2>
+          <section className={SECTION_CLASS}>
+            <h2 className={`${LABEL} mb-3`}>구장 선택</h2>
             <div className="grid grid-cols-2 gap-2">
               {STADIUM_LIST.map((item) => {
                 const selected = stadium === item.code;
@@ -300,40 +325,35 @@ export default function EditRecordPage({
                     type="button"
                     onClick={() => setStadium(item.code)}
                     className={cn(
-                      "rounded-xl border-2 px-3 py-3 text-left transition-all active:scale-[0.98]",
-                      selected
-                        ? "border-[#1A56DB] bg-[#EBF2FD] ring-2 ring-[#1A56DB]/20"
-                        : "border-slate-100 bg-slate-50"
+                      "rounded-[var(--radius-md)] border-2 px-3 py-3 text-left transition-all active:scale-[0.98]",
+                      selected ? CHIP_SELECTED : CHIP_DEFAULT
                     )}
                     aria-pressed={selected}
                   >
-                    <p className="text-sm font-semibold leading-snug text-slate-800">
+                    <p className="text-sm font-semibold leading-snug text-text-primary">
                       {item.name}
                     </p>
-                    <p className="mt-0.5 text-xs text-slate-500">{item.city}</p>
+                    <p className="mt-0.5 text-xs text-text-secondary">
+                      {item.city}
+                    </p>
                   </button>
                 );
               })}
             </div>
           </section>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-sm font-semibold text-slate-700">
-              경기 정보
-            </h2>
+          <section className={SECTION_CLASS}>
+            <h2 className={`${LABEL} mb-3`}>경기 정보</h2>
             <div className="space-y-4">
               <div>
-                <p className="mb-2 text-xs font-medium text-slate-500">내 팀</p>
-                <div className="flex h-12 items-center rounded-xl bg-[#EBF2FD] px-4 text-base font-semibold text-[#1A56DB]">
+                <p className={LABEL_SM}>내 팀</p>
+                <div className="flex h-12 items-center rounded-[var(--radius-md)] bg-accent-bg px-4 text-base font-semibold text-accent">
                   {myTeam?.name ?? "..."}
                 </div>
               </div>
 
               <div>
-                <label
-                  htmlFor="opponent-team"
-                  className="mb-2 block text-xs font-medium text-slate-500"
-                >
+                <label htmlFor="opponent-team" className={LABEL_SM}>
                   상대팀
                 </label>
                 <select
@@ -342,7 +362,7 @@ export default function EditRecordPage({
                   onChange={(e) =>
                     setOpponentTeam(e.target.value as TeamCode | "")
                   }
-                  className="h-12 w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+                  className={INPUT_CLASS}
                 >
                   <option value="">상대팀을 선택하세요</option>
                   {opponentList.map((team) => (
@@ -355,10 +375,7 @@ export default function EditRecordPage({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label
-                    htmlFor="my-score"
-                    className="mb-2 block text-xs font-medium text-slate-500"
-                  >
+                  <label htmlFor="my-score" className={LABEL_SM}>
                     {myTeam?.name ?? "내 팀"} 점수
                   </label>
                   <input
@@ -368,14 +385,11 @@ export default function EditRecordPage({
                     inputMode="numeric"
                     value={myScore}
                     onChange={(e) => setMyScore(e.target.value)}
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+                    className={INPUT_CLASS}
                   />
                 </div>
                 <div>
-                  <label
-                    htmlFor="opponent-score"
-                    className="mb-2 block text-xs font-medium text-slate-500"
-                  >
+                  <label htmlFor="opponent-score" className={LABEL_SM}>
                     상대팀 점수
                   </label>
                   <input
@@ -385,24 +399,20 @@ export default function EditRecordPage({
                     inputMode="numeric"
                     value={opponentScore}
                     onChange={(e) => setOpponentScore(e.target.value)}
-                    className="h-12 w-full rounded-xl border border-slate-200 bg-white px-4 text-base text-slate-800 outline-none focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+                    className={INPUT_CLASS}
                   />
                 </div>
               </div>
 
               <div>
-                <p className="mb-2 text-xs font-medium text-slate-500">
-                  홈 / 원정
-                </p>
+                <p className={LABEL_SM}>홈 / 원정</p>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setIsHome(true)}
                     className={cn(
-                      "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
-                      isHome
-                        ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
-                        : "border-slate-100 bg-slate-50 text-slate-500"
+                      "h-11 rounded-[var(--radius-md)] border-2 text-sm font-semibold transition-all",
+                      isHome ? TOGGLE_SELECTED : TOGGLE_DEFAULT
                     )}
                     aria-pressed={isHome}
                   >
@@ -412,10 +422,8 @@ export default function EditRecordPage({
                     type="button"
                     onClick={() => setIsHome(false)}
                     className={cn(
-                      "h-11 rounded-xl border-2 text-sm font-semibold transition-all",
-                      !isHome
-                        ? "border-[#1A56DB] bg-[#EBF2FD] text-[#1A56DB]"
-                        : "border-slate-100 bg-slate-50 text-slate-500"
+                      "h-11 rounded-[var(--radius-md)] border-2 text-sm font-semibold transition-all",
+                      !isHome ? TOGGLE_SELECTED : TOGGLE_DEFAULT
                     )}
                     aria-pressed={!isHome}
                   >
@@ -426,11 +434,8 @@ export default function EditRecordPage({
             </div>
           </section>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
-            <label
-              htmlFor="comment"
-              className="mb-2 block text-sm font-semibold text-slate-700"
-            >
+          <section className={SECTION_CLASS}>
+            <label htmlFor="comment" className={LABEL}>
               한줄 코멘트
             </label>
             <textarea
@@ -439,14 +444,14 @@ export default function EditRecordPage({
               onChange={(e) => setComment(e.target.value)}
               placeholder="오늘 경기 한줄평을 남겨보세요"
               rows={3}
-              className="w-full resize-none rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#1A56DB] focus:ring-2 focus:ring-[#1A56DB]/20"
+              className={TEXTAREA_CLASS}
             />
           </section>
 
-          <section className="rounded-2xl bg-white p-4 shadow-sm">
+          <section className={SECTION_CLASS}>
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-slate-700">사진</h2>
-              <span className="text-xs text-slate-400">
+              <h2 className="text-sm font-semibold text-text-primary">사진</h2>
+              <span className="text-xs text-text-tertiary">
                 {totalPhotos}/{MAX_PHOTOS}
               </span>
             </div>
@@ -455,7 +460,7 @@ export default function EditRecordPage({
               {existingPhotos.map((url) => (
                 <div
                   key={url}
-                  className="relative aspect-square overflow-hidden rounded-xl bg-slate-100"
+                  className="relative aspect-square overflow-hidden rounded-[var(--radius-md)] bg-surface-subtle"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -477,7 +482,7 @@ export default function EditRecordPage({
               {newPreviewUrls.map((url, i) => (
                 <div
                   key={url}
-                  className="relative aspect-square overflow-hidden rounded-xl bg-slate-100"
+                  className="relative aspect-square overflow-hidden rounded-[var(--radius-md)] bg-surface-subtle"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
@@ -500,7 +505,7 @@ export default function EditRecordPage({
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-slate-200 text-slate-400 hover:border-[#1A56DB] hover:text-[#1A56DB]"
+                  className="flex aspect-square flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] border-2 border-dashed border-[var(--glass-border)] text-text-tertiary transition-colors hover:border-accent hover:text-accent"
                 >
                   <ImagePlus size={22} />
                   <span className="text-xs font-medium">추가</span>
@@ -524,15 +529,18 @@ export default function EditRecordPage({
             </p>
           ) : null}
 
-          <Button
-            variant="secondary"
+          <button
+            type="button"
             onClick={handleSave}
             disabled={saving || !myTeamCode}
+            className={PRIMARY_BTN}
           >
             {saving ? "저장 중..." : "수정 완료"}
-          </Button>
+          </button>
         </div>
       </div>
     </main>
+    <BottomNav variant="glass" />
+    </>
   );
 }

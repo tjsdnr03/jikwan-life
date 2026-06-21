@@ -48,6 +48,8 @@ CREATE INDEX IF NOT EXISTS records_game_date_idx ON public.records (game_date);
 CREATE TABLE IF NOT EXISTS public.kbo_games (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   game_date      DATE NOT NULL,
+  game_datetime  TIMESTAMPTZ,                 -- 경기 시작 시각 (KST, +09:00 보정)
+  time_tbd       BOOLEAN NOT NULL DEFAULT false, -- 시작 시각 미정 여부
   stadium        TEXT NOT NULL,
   home_team      TEXT NOT NULL,
   away_team      TEXT NOT NULL,
@@ -62,6 +64,12 @@ CREATE TABLE IF NOT EXISTS public.kbo_games (
 
 CREATE INDEX IF NOT EXISTS kbo_games_date_stadium_idx
   ON public.kbo_games (game_date, stadium);
+
+-- 기존 DB 마이그레이션 (CREATE TABLE IF NOT EXISTS 는 컬럼을 추가하지 않으므로 별도 처리)
+ALTER TABLE public.kbo_games
+  ADD COLUMN IF NOT EXISTS game_datetime TIMESTAMPTZ;
+ALTER TABLE public.kbo_games
+  ADD COLUMN IF NOT EXISTS time_tbd BOOLEAN NOT NULL DEFAULT false;
 
 -- ============================================================
 -- RLS (Row Level Security)

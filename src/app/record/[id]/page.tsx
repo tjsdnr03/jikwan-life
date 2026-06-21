@@ -4,13 +4,21 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { TeamMascot } from "@/components/team/team-mascot";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
-import { getRecordPhotoStoragePath } from "@/lib/utils";
+import { getRecordPhotoStoragePath, resultLabel } from "@/lib/utils";
 import type { GameResult, Record as GameRecord, StadiumCode } from "@/types";
+
+const SECTION_CLASS = "glass-card p-5";
+const BACK_LINK =
+  "glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-accent transition-opacity hover:opacity-80";
+const PRIMARY_BTN =
+  "flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-[var(--accent)] text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-hover)] active:scale-[0.99]";
+const BOTTOM_NAV_PADDING =
+  "pb-[calc(4rem+max(1.5rem,env(safe-area-inset-bottom))+1rem)]";
 
 function formatRecordDate(isoDate: string): string {
   const date = new Date(isoDate);
@@ -21,26 +29,16 @@ function formatRecordDate(isoDate: string): string {
   return `${y}.${m}.${d} ${days[date.getDay()]}`;
 }
 
-function resultBadgeText(result: GameResult): string {
-  switch (result) {
-    case "win":
-      return "승리";
-    case "loss":
-      return "패배";
-    case "draw":
-      return "무승부";
-  }
-}
-
 function resultBadgeClass(result: GameResult): string {
-  const base = "rounded-full px-3 py-1 text-sm font-semibold";
+  const base =
+    "shrink-0 inline-block rounded-full px-2.5 py-1 text-xs font-semibold";
   switch (result) {
     case "win":
-      return `${base} bg-emerald-50 text-emerald-600`;
+      return `${base} bg-accent-bg text-accent`;
     case "loss":
-      return `${base} bg-red-50 text-red-500`;
+      return `${base} bg-surface-subtle text-text-secondary`;
     case "draw":
-      return `${base} bg-slate-100 text-slate-500`;
+      return `${base} bg-surface-subtle text-text-tertiary`;
   }
 }
 
@@ -132,20 +130,32 @@ export default function RecordDetailPage({
 
   if (loading) {
     return (
-      <main className="flex flex-1 items-center justify-center bg-[#EBF2FD]">
-        <p className="text-sm text-slate-400">불러오는 중...</p>
-      </main>
+      <>
+        <main
+          className={`page-gradient flex flex-1 items-center justify-center ${BOTTOM_NAV_PADDING}`}
+        >
+          <p className="text-sm text-text-tertiary">불러오는 중...</p>
+        </main>
+        <BottomNav variant="glass" />
+      </>
     );
   }
 
   if (error || !record) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center bg-[#EBF2FD] px-6">
-        <p className="text-sm text-slate-500">{error ?? "기록을 찾을 수 없어요."}</p>
-        <Link href="/record" className="mt-4 text-sm font-medium text-[#1A56DB]">
-          목록으로 돌아가기
-        </Link>
-      </main>
+      <>
+        <main
+          className={`page-gradient flex flex-1 flex-col items-center justify-center px-5 ${BOTTOM_NAV_PADDING}`}
+        >
+          <p className="text-sm text-text-secondary">
+            {error ?? "기록을 찾을 수 없어요."}
+          </p>
+          <Link href="/record" className="mt-4 text-sm font-medium text-accent">
+            목록으로 돌아가기
+          </Link>
+        </main>
+        <BottomNav variant="glass" />
+      </>
     );
   }
 
@@ -156,49 +166,54 @@ export default function RecordDetailPage({
     record.my_score !== null && record.opponent_score !== null;
 
   return (
-    <main className="min-h-full bg-[#EBF2FD] pb-10">
-      <div className="mx-auto w-full max-w-md px-6 pt-6">
+    <>
+    <main className={`page-gradient min-h-full ${BOTTOM_NAV_PADDING}`}>
+      <div className="mx-auto w-full max-w-md px-5 pt-8">
         <header className="mb-6 flex items-center gap-3">
           <Link
             href="/record"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-[#1A56DB] shadow-sm"
+            className={BACK_LINK}
             aria-label="뒤로가기"
           >
             <ArrowLeft size={22} />
           </Link>
-          <h1 className="flex-1 text-xl font-bold text-slate-800">기록 상세</h1>
+          <h1 className="flex-1 text-xl font-bold text-text-primary">
+            기록 상세
+          </h1>
           <div className="flex shrink-0 gap-2">
             <Link
               href={`/record/${id}/edit`}
-              className="rounded-xl border border-[#1A56DB] px-3 py-2 text-xs font-semibold text-[#1A56DB] hover:bg-[#EBF2FD]"
+              className="rounded-[var(--radius-md)] border border-accent bg-accent-bg px-3 py-2 text-xs font-semibold text-accent transition-colors hover:bg-accent-bg-strong"
             >
               수정
             </Link>
             <button
               type="button"
               onClick={() => setDeleteModalOpen(true)}
-              className="rounded-xl border border-red-400 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-50"
+              className="rounded-[var(--radius-md)] border border-rose-300 px-3 py-2 text-xs font-semibold text-rose-500 transition-colors hover:bg-rose-50"
             >
               삭제
             </button>
           </div>
         </header>
 
-        <div className="space-y-4">
-          <section className="rounded-2xl bg-white p-5 shadow-sm">
+        <div className="space-y-3">
+          <section className={SECTION_CLASS}>
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-lg font-bold text-slate-800">
+                <p className="text-lg font-bold text-text-primary">
                   {formatRecordDate(record.game_date)}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">{stadium.name}</p>
-                <p className="mt-1 text-xs text-slate-400">
+                <p className="mt-1 text-sm text-text-secondary">
+                  {stadium.name}
+                </p>
+                <p className="mt-1 text-xs text-text-tertiary">
                   {record.is_home ? "홈" : "원정"} 직관
                 </p>
               </div>
               {record.result ? (
                 <span className={resultBadgeClass(record.result)}>
-                  {resultBadgeText(record.result)}
+                  {resultLabel(record.result)}
                 </span>
               ) : null}
             </div>
@@ -206,23 +221,23 @@ export default function RecordDetailPage({
             <div className="mt-6 flex items-center justify-center gap-4">
               <div className="flex flex-col items-center">
                 <TeamMascot team={myTeam} size="xl" />
-                <span className="mt-1 text-sm font-semibold text-slate-700">
+                <span className="mt-1 text-sm font-semibold text-text-primary">
                   {myTeam.name}
                 </span>
                 {hasScore ? (
-                  <span className="text-3xl font-extrabold text-slate-800">
+                  <span className="text-3xl font-extrabold text-text-primary">
                     {record.my_score}
                   </span>
                 ) : null}
               </div>
-              <span className="text-xl font-bold text-slate-300">:</span>
+              <span className="text-xl font-bold text-text-tertiary">:</span>
               <div className="flex flex-col items-center">
                 <TeamMascot team={opponentTeam} size="xl" />
-                <span className="mt-1 text-sm font-semibold text-slate-700">
+                <span className="mt-1 text-sm font-semibold text-text-primary">
                   {opponentTeam.name}
                 </span>
                 {hasScore ? (
-                  <span className="text-3xl font-extrabold text-slate-800">
+                  <span className="text-3xl font-extrabold text-text-primary">
                     {record.opponent_score}
                   </span>
                 ) : null}
@@ -231,24 +246,26 @@ export default function RecordDetailPage({
           </section>
 
           {record.comment ? (
-            <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="mb-2 text-sm font-semibold text-slate-500">
+            <section className={SECTION_CLASS}>
+              <h2 className="mb-2 text-sm font-semibold text-text-secondary">
                 한줄 코멘트
               </h2>
-              <p className="text-sm leading-relaxed text-slate-700">
+              <p className="text-sm leading-relaxed text-text-primary">
                 {record.comment}
               </p>
             </section>
           ) : null}
 
           {record.photos && record.photos.length > 0 ? (
-            <section className="rounded-2xl bg-white p-5 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-slate-500">사진</h2>
+            <section className={SECTION_CLASS}>
+              <h2 className="mb-3 text-sm font-semibold text-text-secondary">
+                사진
+              </h2>
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {record.photos.map((url, i) => (
                   <div
                     key={url}
-                    className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100"
+                    className="h-24 w-24 shrink-0 overflow-hidden rounded-[var(--radius-md)] bg-surface-subtle"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -262,21 +279,21 @@ export default function RecordDetailPage({
             </section>
           ) : null}
 
-          <Link href={`/card/${id}`}>
-            <Button variant="secondary">카드 만들기</Button>
+          <Link href={`/card/${id}`} className={PRIMARY_BTN}>
+            카드 만들기
           </Link>
         </div>
       </div>
 
       {deleteModalOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5"
           role="dialog"
           aria-modal="true"
         >
-          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-xl">
-            <h2 className="text-lg font-bold text-slate-800">기록 삭제</h2>
-            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+          <div className="glass-card w-full max-w-sm p-5 shadow-[var(--shadow-glass-lg)]">
+            <h2 className="text-lg font-bold text-text-primary">기록 삭제</h2>
+            <p className="mt-2 text-sm leading-relaxed text-text-secondary">
               정말 삭제하시겠어요? 이 기록은 복구할 수 없습니다.
             </p>
             <div className="mt-5 grid grid-cols-2 gap-2">
@@ -284,7 +301,7 @@ export default function RecordDetailPage({
                 type="button"
                 onClick={() => setDeleteModalOpen(false)}
                 disabled={deleting}
-                className="h-11 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600"
+                className="h-11 rounded-[var(--radius-md)] border border-[var(--border-subtle)] text-sm font-semibold text-text-secondary transition-colors hover:bg-surface-subtle disabled:opacity-50"
               >
                 취소
               </button>
@@ -292,7 +309,7 @@ export default function RecordDetailPage({
                 type="button"
                 onClick={handleDelete}
                 disabled={deleting}
-                className="h-11 rounded-xl bg-red-500 text-sm font-semibold text-white disabled:opacity-50"
+                className="h-11 rounded-[var(--radius-md)] bg-rose-500 text-sm font-semibold text-white transition-colors hover:bg-rose-600 disabled:opacity-50"
               >
                 {deleting ? "삭제 중..." : "삭제"}
               </button>
@@ -301,5 +318,7 @@ export default function RecordDetailPage({
         </div>
       ) : null}
     </main>
+    <BottomNav variant="glass" />
+    </>
   );
 }

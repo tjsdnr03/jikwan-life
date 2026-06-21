@@ -6,9 +6,15 @@ import { useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import CardEditor from "@/components/card/CardEditor";
 import type { CardData } from "@/components/card/StoryCard";
+import { BottomNav } from "@/components/layout/bottom-nav";
 import { recordToCardData } from "@/lib/cardData";
 import { createClient } from "@/lib/supabase";
 import type { Record as GameRecord } from "@/types";
+
+const BACK_LINK =
+  "glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] text-accent transition-opacity hover:opacity-80";
+const BOTTOM_NAV_PADDING =
+  "pb-[calc(4rem+max(1.5rem,env(safe-area-inset-bottom))+1rem)]";
 
 /**
  * 카드 에디터 (/card/preview)
@@ -55,37 +61,38 @@ export default function CardPreviewPage() {
   }, [router]);
 
   return (
-    <main className="min-h-full bg-[#EBF2FD] pb-10">
-      <div className="mx-auto w-full max-w-md px-6 pt-6">
-        <header className="mb-6 flex items-center gap-3">
-          <Link
-            href="/card"
-            className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#1A56DB] shadow-sm transition-colors hover:bg-[#EBF2FD]"
-            aria-label="뒤로가기"
-          >
-            <ArrowLeft size={22} />
-          </Link>
-          <h1 className="text-xl font-bold text-slate-800">카드 에디터</h1>
-        </header>
-
-        {loading ? (
-          <p className="mt-20 text-center text-sm text-slate-500">
-            불러오는 중...
-          </p>
-        ) : cardData ? (
-          <CardEditor data={cardData} recordPhotos={recordPhotos} />
-        ) : (
-          <div className="mt-20 text-center">
-            <p className="text-sm text-slate-500">아직 직관 기록이 없어요.</p>
-            <Link
-              href="/record/new"
-              className="mt-4 inline-block text-sm font-semibold text-[#1A56DB]"
-            >
-              직관 기록하러 가기
+    <>
+      <main className={`page-gradient min-h-full ${BOTTOM_NAV_PADDING}`}>
+        <div className="mx-auto w-full max-w-md px-5 pt-8">
+          <header className="mb-6 flex items-center gap-3">
+            <Link href="/card" className={BACK_LINK} aria-label="뒤로가기">
+              <ArrowLeft size={22} />
             </Link>
-          </div>
-        )}
-      </div>
-    </main>
+            <h1 className="text-xl font-bold text-text-primary">카드 에디터</h1>
+          </header>
+
+          {loading ? (
+            <p className="mt-20 text-center text-sm text-text-tertiary">
+              불러오는 중...
+            </p>
+          ) : cardData ? (
+            <CardEditor data={cardData} recordPhotos={recordPhotos} />
+          ) : (
+            <div className="mt-20 text-center">
+              <p className="text-sm text-text-secondary">
+                아직 직관 기록이 없어요.
+              </p>
+              <Link
+                href="/record/new"
+                className="mt-4 inline-block text-sm font-semibold text-accent"
+              >
+                직관 기록하러 가기
+              </Link>
+            </div>
+          )}
+        </div>
+      </main>
+      <BottomNav variant="glass" />
+    </>
   );
 }

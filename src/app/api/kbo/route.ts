@@ -175,6 +175,7 @@ interface NaverGame {
   suspended?: boolean;
   gameDate?: number | string;
   gameDateTime?: string;
+  timeTbd?: boolean;
 }
 
 /**
@@ -228,6 +229,8 @@ async function fetchKboGames(
     rows.push({
       // id/fetched_at 은 DB 기본값에 맡긴다.
       game_date: parseGameDate(g, fromDate),
+      game_datetime: parseGameDateTime(g),
+      time_tbd: g.timeTbd ?? false,
       stadium,
       home_team: home,
       away_team: away,
@@ -254,6 +257,21 @@ function parseGameDate(g: NaverGame, fallback: string): string {
     return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
   }
   return fallback;
+}
+
+/**
+ * 네이버 gameDateTime("2026-06-19T18:30:00", 오프셋 없는 KST 벽시계)을
+ * KST 오프셋(+09:00)을 붙인 ISO 문자열로 변환한다. 없거나 형식이 다르면 null.
+ * TIMESTAMPTZ 컬럼에 정확한 시점으로 저장된다.
+ */
+function parseGameDateTime(g: NaverGame): string | null {
+  const raw = g.gameDateTime;
+  if (!raw) return null;
+  // "YYYY-MM-DDTHH:MM:SS" (오프셋 없음) 형태만 보정. 이미 오프셋이 있으면 그대로 둔다.
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw) && !/[+-]\d{2}:?\d{2}|Z$/.test(raw)) {
+    return `${raw}+09:00`;
+  }
+  return raw;
 }
 
 /** 네이버 팀명 → 팀 코드 (공백 제거 후 매핑) */

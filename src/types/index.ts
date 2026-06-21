@@ -86,6 +86,8 @@ export interface Record {
 export interface KBOGame {
   id: string;
   game_date: string; // ISO date (YYYY-MM-DD)
+  game_datetime: string | null; // 경기 시작 시각 (ISO, KST +09:00). 미수집 시 null
+  time_tbd: boolean; // 시작 시각 미정 여부
   stadium: StadiumCode;
   home_team: TeamCode;
   away_team: TeamCode;
