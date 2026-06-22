@@ -8,7 +8,14 @@ import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
-import { cn, displayDate, formatDate, resultLabel, winRate } from "@/lib/utils";
+import {
+  cn,
+  displayDate,
+  formatDate,
+  formatKstTime,
+  resultLabel,
+  winRate,
+} from "@/lib/utils";
 import type {
   GameResult,
   GameStatus,
@@ -237,6 +244,12 @@ export default function HomePage() {
   const losses = records.filter((r) => r.result === "loss").length;
   const winRatePercent = Math.round(winRate(wins, losses) * 100);
   const opponentTeam = myGame ? getTeam(myGame.opponent) : null;
+  // 경기 시작 시각: 미정이면 안내, 시각 있으면 KST 'HH:MM', 없으면(null) 생략
+  const gameTime = myGame
+    ? myGame.game.timeTbd
+      ? "시간 미정"
+      : formatKstTime(myGame.game.gameDateTime)
+    : null;
 
   return (
     <>
@@ -319,7 +332,8 @@ export default function HomePage() {
               </div>
 
               <p className="mt-4 text-center text-xs leading-relaxed text-text-secondary">
-                {displayDate(myGame.game.date)} ·{" "}
+                {displayDate(myGame.game.date)}
+                {gameTime ? ` ${gameTime}` : ""} ·{" "}
                 {getStadium(myGame.game.stadium).name}
               </p>
             </section>

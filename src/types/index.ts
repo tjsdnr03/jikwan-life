@@ -112,6 +112,10 @@ export interface KBOGameResult {
   awayScore: number | null;
   stadium: StadiumCode;
   status: GameStatus;
+  /** 경기 시작 시각 (ISO, KST +09:00). 미수집 시 null */
+  gameDateTime: string | null;
+  /** 시작 시각 미정 여부 */
+  timeTbd: boolean;
 }
 
 /** /api/kbo?month=YYYY-MM 응답 한 경기 (날짜 포함 월간 일정) */

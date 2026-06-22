@@ -45,6 +45,19 @@ export function displayDate(isoDate: string): string {
   return `${y}.${m}.${d} (${days[date.getDay()]})`;
 }
 
+/** ISO 시각 → KST 'HH:MM' (예: '18:30'). 뷰어 타임존과 무관하게 KST 고정. 실패 시 null */
+export function formatKstTime(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Seoul",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+}
+
 /** 승률 계산 (0~1). 무승부는 제외하고 계산 */
 export function winRate(wins: number, losses: number): number {
   const total = wins + losses;

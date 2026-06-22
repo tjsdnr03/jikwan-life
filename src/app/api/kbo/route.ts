@@ -319,6 +319,8 @@ function rowToResult(row: KBOGame): KBOGameResult {
     awayScore: row.away_score,
     stadium: row.stadium,
     status: row.status,
+    gameDateTime: row.game_datetime,
+    timeTbd: row.time_tbd,
   };
 }
 
