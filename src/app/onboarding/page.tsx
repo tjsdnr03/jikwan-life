@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { TeamMascot } from "@/components/team/team-mascot";
-import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase";
 import { TEAM_LIST } from "@/lib/teams";
 import { cn } from "@/lib/utils";
 import type { TeamCode } from "@/types";
+
+const PRIMARY_BTN =
+  "flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-[var(--accent)] text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-hover)] active:scale-[0.99] disabled:opacity-60";
 
 /**
  * 온보딩 (/onboarding) — 최초 1회
@@ -66,10 +68,10 @@ export default function OnboardingPage() {
   };
 
   return (
-    <main className="flex flex-1 flex-col bg-[#EBF2FD] px-6 py-10">
+    <main className="page-gradient flex flex-1 flex-col px-5 pt-8 pb-6">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
         <header className="mb-8 text-center">
-          <h1 className="text-2xl font-bold leading-snug text-[#1A56DB]">
+          <h1 className="text-2xl font-bold leading-snug text-text-primary">
             응원하는 팀을 선택해주세요!
           </h1>
         </header>
@@ -84,10 +86,10 @@ export default function OnboardingPage() {
                 type="button"
                 onClick={() => setSelectedTeam(team.code)}
                 className={cn(
-                  "flex flex-col items-center justify-center gap-2 rounded-2xl border-2 px-3 py-5 transition-all active:scale-[0.98]",
+                  "flex flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border-2 px-3 py-5 transition-all active:scale-[0.98]",
                   isSelected
-                    ? "border-[#1A56DB] shadow-md ring-2 ring-[#1A56DB]/20"
-                    : "border-transparent shadow-sm"
+                    ? "border-accent ring-2 ring-[var(--accent-border)]"
+                    : "border-transparent"
                 )}
                 style={{ backgroundColor: team.pastelBg }}
                 aria-pressed={isSelected}
@@ -112,9 +114,14 @@ export default function OnboardingPage() {
         ) : null}
 
         <div className="mt-8 pb-4">
-          <Button disabled={!selectedTeam || loading} onClick={handleStart}>
+          <button
+            type="button"
+            disabled={!selectedTeam || loading}
+            onClick={handleStart}
+            className={PRIMARY_BTN}
+          >
             {loading ? "저장 중..." : "시작하기"}
-          </Button>
+          </button>
         </div>
       </div>
     </main>
