@@ -8,7 +8,7 @@ import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
-import { cn, formatDate, resultLabel } from "@/lib/utils";
+import { cn, formatDate, formatKstTime, resultLabel } from "@/lib/utils";
 import type {
   GameResult,
   GameStatus,
@@ -219,6 +219,11 @@ export default function CalendarPage() {
   const myTeamName = myTeam ? getTeam(myTeam).name : "";
   const selectedRecord = selectedDate ? recordMap.get(selectedDate) : null;
   const selectedMyGame = selectedDate ? myGameMap.get(selectedDate) : null;
+  const selectedGameTime = selectedMyGame
+    ? selectedMyGame.game.timeTbd
+      ? "시간 미정"
+      : formatKstTime(selectedMyGame.game.gameDateTime)
+    : null;
 
   return (
     <>
@@ -393,7 +398,8 @@ export default function CalendarPage() {
                     </div>
 
                     <p className="mt-3 text-center text-xs text-text-secondary">
-                      {getStadium(selectedMyGame.game.stadium).name} ·{" "}
+                      {getStadium(selectedMyGame.game.stadium).name}
+                      {selectedGameTime ? ` · ${selectedGameTime}` : ""} ·{" "}
                       {statusLabel(selectedMyGame.game.status)}
                     </p>
                   </div>
