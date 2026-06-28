@@ -5,9 +5,11 @@ import { STADIUM_LIST } from "@/lib/stadiums";
 import { TEAM_LIST } from "@/lib/teams";
 import type {
   GameStatus,
+  InningScores,
   KBOGame,
   KBOGameResult,
   KBOScheduleGame,
+  LineScoreTotals,
   StadiumCode,
   TeamCode,
 } from "@/types";
@@ -33,8 +35,26 @@ function isFinal(g: KBOGame): boolean {
  */
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const linescore = searchParams.get("linescore") ?? "";
   const month = searchParams.get("month") ?? "";
   const date = searchParams.get("date") ?? "";
+
+  // 라인스코어 지연 수집 모드 (/api/kbo?linescore=<gameId>)
+  // 종료 경기의 inning_scores 가 비어 있을 때만 record 1회 호출 → 캐시. 응답: InningScores | null
+  if (linescore) {
+    // gameId 형식 검증 (영숫자) — 비정상 입력은 record 호출 없이 차단
+    if (!/^[A-Za-z0-9]{1,32}$/.test(linescore)) {
+      return NextResponse.json(null);
+    }
+    try {
+      const result = await collectLineScore(linescore);
+      return NextResponse.json(result);
+    } catch (err) {
+      // gameId 만 로그 (선수 정보 없음)
+      console.error("[kbo] 라인스코어 수집 실패:", linescore, err);
+      return NextResponse.json(null);
+    }
+  }
 
   // 월간 일정 모드 (YYYY-MM)
   if (month) {
@@ -129,6 +149,128 @@ async function cacheRows(
   if (error) {
     console.error("[kbo] 캐시 저장 실패:", error.message);
   }
+}
+
+// ============================================================
+// 라인스코어(이닝별 점수) 지연 수집 — record 엔드포인트
+// ============================================================
+
+/**
+ * game_id 로 종료 경기의 라인스코어를 1회 수집해 kbo_games.inning_scores 에 캐시한다.
+ *
+ * 정책:
+ *  - 행이 없으면 null.
+ *  - inning_scores 가 이미 있으면 record 호출 없이 그대로 반환(영구 캐시).
+ *  - status 가 'finished' 인 경기에만 수집(예정/진행/취소는 null).
+ *  - 경기당 record 1회만 호출(폴링 없음). 저장 실패/네이버 실패는 best-effort(예외 던지지 않음).
+ */
+async function collectLineScore(gameId: string): Promise<InningScores | null> {
+  const admin = createAdminClient();
+  const db = admin ?? (await createServerClient());
+
+  const { data: row } = await db
+    .from("kbo_games")
+    .select("status, inning_scores")
+    .eq("game_id", gameId)
+    .maybeSingle<Pick<KBOGame, "status" | "inning_scores">>();
+
+  if (!row) return null;
+  // 이미 캐시돼 있으면 record 호출하지 않고 그대로 반환
+  if (row.inning_scores) return row.inning_scores;
+  // 종료 경기만 수집
+  if (row.status !== "finished") return null;
+
+  const scoreBoard = await fetchScoreBoard(gameId);
+  const lineScore = scoreBoardToInningScores(scoreBoard);
+  if (!lineScore) return null;
+
+  // best-effort 저장 (service_role 있을 때만). game_id 로 해당 행만 갱신.
+  if (admin) {
+    const { error } = await admin
+      .from("kbo_games")
+      .update({ inning_scores: lineScore })
+      .eq("game_id", gameId);
+    if (error) {
+      console.error("[kbo] 라인스코어 저장 실패:", gameId, error.message);
+    }
+  }
+
+  return lineScore;
+}
+
+/**
+ * 네이버 record 엔드포인트에서 scoreBoard 객체만 꺼내 반환한다.
+ * ★ scoreBoard 외 키(battersBoxscore/pitchersBoxscore/teamPitchingBoxscore/
+ *   pitchingResult/etcRecords 등 선수 포함 데이터)는 읽지도 저장하지도 로그에 남기지도 않는다.
+ * 실패 시 null.
+ */
+async function fetchScoreBoard(gameId: string): Promise<unknown> {
+  const url = `https://api-gw.sports.naver.com/schedule/games/${gameId}/record`;
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+      Referer: "https://sports.news.naver.com/kbaseball/schedule/index",
+      Accept: "application/json",
+    },
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    console.error("[kbo] record 응답 오류:", gameId, res.status);
+    return null;
+  }
+  const json = (await res.json()) as {
+    result?: { recordData?: { scoreBoard?: unknown } };
+  };
+  // scoreBoard 키만 추출하고 나머지는 버린다.
+  return json?.result?.recordData?.scoreBoard ?? null;
+}
+
+/**
+ * 네이버 scoreBoard → 우리 InningScores 로 방어적 변환.
+ * inn/rheb 또는 home/away 가 없거나 형태가 다르면 null (예외 던지지 않음).
+ * scoreBoard 외 키는 일절 참조하지 않는다.
+ */
+function scoreBoardToInningScores(sb: unknown): InningScores | null {
+  if (!sb || typeof sb !== "object") return null;
+  const board = sb as {
+    inn?: { home?: unknown; away?: unknown };
+    rheb?: { home?: unknown; away?: unknown };
+  };
+  if (!board.inn || !board.rheb) return null;
+
+  const innHome = toIntArray(board.inn.home);
+  const innAway = toIntArray(board.inn.away);
+  if (!innHome || !innAway) return null;
+
+  const rhebHome = toTotals(board.rheb.home);
+  const rhebAway = toTotals(board.rheb.away);
+  if (!rhebHome || !rhebAway) return null;
+
+  return {
+    inn: { home: innHome, away: innAway },
+    rheb: { home: rhebHome, away: rhebAway },
+  };
+}
+
+/** 이닝별 득점 배열(문자/숫자 혼재 가능) → number[]. 배열 아니면 null */
+function toIntArray(value: unknown): number[] | null {
+  if (!Array.isArray(value)) return null;
+  return value.map((v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  });
+}
+
+/** {r,h,e,b} 합계 → LineScoreTotals. 객체 아니면 null */
+function toTotals(value: unknown): LineScoreTotals | null {
+  if (!value || typeof value !== "object") return null;
+  const t = value as Record<string, unknown>;
+  const num = (x: unknown) => {
+    const n = Number(x);
+    return Number.isFinite(n) ? n : 0;
+  };
+  return { r: num(t.r), h: num(t.h), e: num(t.e), b: num(t.b) };
 }
 
 // ============================================================
