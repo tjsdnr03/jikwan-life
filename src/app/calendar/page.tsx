@@ -406,14 +406,30 @@ export default function CalendarPage() {
                 ) : null}
 
                 {selectedRecord ? (
-                  <div className="glass-card p-4">
-                    <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
-                      내 직관 기록
-                    </p>
-                    <p className="text-sm text-text-primary">
-                      {summarize(selectedRecord, myTeamName)}
-                    </p>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(`/record/${selectedRecord.id}`)
+                    }
+                    className="glass-card w-full cursor-pointer p-4 text-left transition-colors hover:bg-surface-subtle active:opacity-90"
+                    aria-label="이 날 직관 기록 상세 보기"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-text-tertiary">
+                          내 직관 기록
+                        </p>
+                        <p className="text-sm text-text-primary">
+                          {summarize(selectedRecord, myTeamName)}
+                        </p>
+                      </div>
+                      <ChevronRight
+                        size={18}
+                        className="mt-1 shrink-0 text-text-tertiary"
+                        aria-hidden
+                      />
+                    </div>
+                  </button>
                 ) : null}
               </>
             ) : (
