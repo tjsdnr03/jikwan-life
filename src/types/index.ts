@@ -99,10 +99,28 @@ export interface KBOGame {
   fetched_at: string;
 }
 
-/** 이닝별 점수 (kbo_games.inning_scores) */
+/** 팀 합계 (R 득점 / H 안타 / E 실책 / B 사사구) — 네이버 scoreBoard.rheb 형태 */
+export interface LineScoreTotals {
+  r: number;
+  h: number;
+  e: number;
+  b: number;
+}
+
+/**
+ * 라인스코어 (kbo_games.inning_scores) — 네이버 record 응답의 scoreBoard 형태.
+ * - inn: 이닝별 득점 배열 (9개+, 연장 시 더 길어짐)
+ * - rheb: 팀 합계 (득점/안타/실책/사사구)
+ */
 export interface InningScores {
-  home: number[];
-  away: number[];
+  inn: {
+    home: number[];
+    away: number[];
+  };
+  rheb: {
+    home: LineScoreTotals;
+    away: LineScoreTotals;
+  };
 }
 
 /** /api/kbo 응답 한 경기 (팀/구장은 우리 코드로 매핑된 값) */
