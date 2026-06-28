@@ -47,6 +47,7 @@ CREATE INDEX IF NOT EXISTS records_game_date_idx ON public.records (game_date);
 -- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS public.kbo_games (
   id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  game_id        TEXT,                        -- 네이버 경기 식별자 (예: 20260625HTWO02026)
   game_date      DATE NOT NULL,
   game_datetime  TIMESTAMPTZ,                 -- 경기 시작 시각 (KST, +09:00 보정)
   time_tbd       BOOLEAN NOT NULL DEFAULT false, -- 시작 시각 미정 여부
@@ -70,6 +71,8 @@ ALTER TABLE public.kbo_games
   ADD COLUMN IF NOT EXISTS game_datetime TIMESTAMPTZ;
 ALTER TABLE public.kbo_games
   ADD COLUMN IF NOT EXISTS time_tbd BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE public.kbo_games
+  ADD COLUMN IF NOT EXISTS game_id TEXT;
 
 -- ============================================================
 -- RLS (Row Level Security)

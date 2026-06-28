@@ -85,6 +85,7 @@ export interface Record {
 /** KBO 경기 데이터 캐시 (kbo_games 테이블) */
 export interface KBOGame {
   id: string;
+  game_id: string | null; // 네이버 경기 식별자 (예: '20260625HTWO02026'). 미수집 시 null
   game_date: string; // ISO date (YYYY-MM-DD)
   game_datetime: string | null; // 경기 시작 시각 (ISO, KST +09:00). 미수집 시 null
   time_tbd: boolean; // 시작 시각 미정 여부

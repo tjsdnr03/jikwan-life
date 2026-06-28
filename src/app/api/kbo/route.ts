@@ -165,6 +165,7 @@ const STADIUM_BY_HOME_TEAM: Record<TeamCode, StadiumCode> = (() => {
 // ============================================================
 
 interface NaverGame {
+  gameId?: string;
   homeTeamName?: string;
   awayTeamName?: string;
   homeTeamScore?: number | string | null;
@@ -228,6 +229,7 @@ async function fetchKboGames(
 
     rows.push({
       // id/fetched_at 은 DB 기본값에 맡긴다.
+      game_id: g.gameId ?? null, // 네이버 경기 식별자 (record 엔드포인트 등 후속 단계용)
       game_date: parseGameDate(g, fromDate),
       game_datetime: parseGameDateTime(g),
       time_tbd: g.timeTbd ?? false,
