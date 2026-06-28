@@ -5,12 +5,18 @@ import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
 import { ArrowLeft } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { LineScoreBoard } from "@/components/record/line-score";
 import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
 import { getRecordPhotoStoragePath, resultLabel } from "@/lib/utils";
-import type { GameResult, Record as GameRecord, StadiumCode } from "@/types";
+import type {
+  GameResult,
+  InningScores,
+  Record as GameRecord,
+  StadiumCode,
+} from "@/types";
 
 const SECTION_CLASS = "glass-card p-5";
 const BACK_LINK =
@@ -59,6 +65,7 @@ export default function RecordDetailPage({
   const [record, setRecord] = useState<GameRecord | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [lineScore, setLineScore] = useState<InningScores | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -98,6 +105,55 @@ export default function RecordDetailPage({
 
     load();
   }, [id, router]);
+
+  // kbo_games 매칭 → game_id → 라인스코어 1회 조회 (없으면 섹션 숨김)
+  useEffect(() => {
+    if (!record) return;
+
+    let cancelled = false;
+
+    async function loadLineScore() {
+      if (!record) return;
+
+      setLineScore(null);
+      const supabase = createClient();
+      const homeTeam = record.is_home ? record.my_team : record.opponent_team;
+      const awayTeam = record.is_home ? record.opponent_team : record.my_team;
+
+      const { data: kboRow } = await supabase
+        .from("kbo_games")
+        .select("game_id")
+        .eq("game_date", record.game_date)
+        .eq("home_team", homeTeam)
+        .eq("away_team", awayTeam)
+        .maybeSingle<{ game_id: string | null }>();
+
+      if (cancelled) return;
+
+      if (!kboRow?.game_id) {
+        setLineScore(null);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `/api/kbo?linescore=${encodeURIComponent(kboRow.game_id)}`
+        );
+        const data = res.ok
+          ? ((await res.json()) as InningScores | null)
+          : null;
+        if (!cancelled) setLineScore(data);
+      } catch {
+        if (!cancelled) setLineScore(null);
+      }
+    }
+
+    loadLineScore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [record]);
 
   const handleDelete = async () => {
     if (!record) return;
@@ -244,6 +300,18 @@ export default function RecordDetailPage({
               </div>
             </div>
           </section>
+
+          {lineScore ? (
+            <LineScoreBoard
+              scores={lineScore}
+              homeTeam={
+                record.is_home ? record.my_team : record.opponent_team
+              }
+              awayTeam={
+                record.is_home ? record.opponent_team : record.my_team
+              }
+            />
+          ) : null}
 
           {record.comment ? (
             <section className={SECTION_CLASS}>
