@@ -131,6 +131,8 @@ export interface KBOGameResult {
   awayScore: number | null;
   stadium: StadiumCode;
   status: GameStatus;
+  /** 네이버 경기 식별자 (예: '20260625HTWO02026'). 라인스코어 조회용. 미수집 시 null */
+  gameId: string | null;
   /** 경기 시작 시각 (ISO, KST +09:00). 미수집 시 null */
   gameDateTime: string | null;
   /** 시작 시각 미정 여부 */

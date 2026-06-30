@@ -142,7 +142,15 @@ async function cacheRows(
   admin: ReturnType<typeof createAdminClient>,
   rows: KBOGame[]
 ): Promise<void> {
-  if (!admin) return;
+  if (!admin) {
+    // service_role 키가 없어 캐시 쓰기를 건너뜀 → 무음 실패 재발 방지를 위해 경고.
+    console.warn(
+      "[kbo] 캐시 저장 건너뜀: SUPABASE_SERVICE_ROLE_KEY 없음 (rows:",
+      rows.length,
+      ")"
+    );
+    return;
+  }
   const { error } = await admin
     .from("kbo_games")
     .upsert(rows, { onConflict: "game_date,home_team,away_team" });
@@ -193,6 +201,14 @@ async function collectLineScore(gameId: string): Promise<InningScores | null> {
     if (error) {
       console.error("[kbo] 라인스코어 저장 실패:", gameId, error.message);
     }
+  } else {
+    // service_role 키가 없어 쓰기를 건너뜀 → 캐시가 안 쌓여 매 호출마다 record 재요청됨.
+    // 과거의 무음 실패 재발 방지를 위해 경고를 남긴다 (민감정보 없이 gameId 만).
+    console.warn(
+      "[kbo] 라인스코어 저장 건너뜀: SUPABASE_SERVICE_ROLE_KEY 없음 (gameId:",
+      gameId,
+      ")"
+    );
   }
 
   return lineScore;
@@ -463,6 +479,7 @@ function rowToResult(row: KBOGame): KBOGameResult {
     awayScore: row.away_score,
     stadium: row.stadium,
     status: row.status,
+    gameId: row.game_id,
     gameDateTime: row.game_datetime,
     timeTbd: row.time_tbd,
   };
