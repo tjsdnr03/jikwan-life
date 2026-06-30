@@ -7,7 +7,7 @@ import { BottomNav } from "@/components/layout/bottom-nav";
 import { LineScoreBoard } from "@/components/record/line-score";
 import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
-import { getStadium } from "@/lib/stadiums";
+import { getStadium, STADIUM_LIST } from "@/lib/stadiums";
 import { getTeam } from "@/lib/teams";
 import { cn, formatDate, formatKstTime, resultLabel } from "@/lib/utils";
 import type {
@@ -16,8 +16,12 @@ import type {
   InningScores,
   KBOScheduleGame,
   Record,
+  StadiumCode,
   TeamCode,
 } from "@/types";
+
+const PRIMARY_BTN =
+  "flex h-14 w-full items-center justify-center rounded-[var(--radius-lg)] bg-[var(--accent)] text-base font-semibold text-white shadow-[var(--shadow-soft)] transition-colors hover:bg-[var(--accent-hover)] active:scale-[0.99] disabled:opacity-60";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
@@ -81,8 +85,16 @@ function summarize(record: Record, myTeamName: string): string {
   return `${myTeamName}${score} ${opponent}${label}`.trim();
 }
 
+/** 달력 → 기록 작성 prefill URL (구장 코드가 유효할 때만 stadium 포함) */
+function buildRecordNewUrl(date: string, stadium: StadiumCode): string {
+  const params = new URLSearchParams({ date });
+  if (STADIUM_LIST.some((s) => s.code === stadium)) {
+    params.set("stadium", stadium);
+  }
+  return `/record/new?${params.toString()}`;
+}
+
 /**
- * 달력 뷰 (/calendar)
  * 월간 캘린더 + 직관 승/패 dot(records) + KBO 내 팀 경기 일정(api/kbo) 오버레이
  */
 export default function CalendarPage() {
@@ -480,6 +492,21 @@ export default function CalendarPage() {
                         aria-hidden
                       />
                     </div>
+                  </button>
+                ) : selectedMyGame && selectedDate ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push(
+                        buildRecordNewUrl(
+                          selectedDate,
+                          selectedMyGame.game.stadium
+                        )
+                      )
+                    }
+                    className={PRIMARY_BTN}
+                  >
+                    이 경기 기록하기
                   </button>
                 ) : null}
               </>
