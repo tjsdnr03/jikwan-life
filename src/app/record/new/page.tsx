@@ -1,8 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  type ChangeEvent,
+  Suspense,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ArrowLeft, ImagePlus, X } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { TeamMascot } from "@/components/team/team-mascot";
@@ -36,16 +43,38 @@ const BACK_LINK =
 const BOTTOM_NAV_PADDING =
   "pb-[calc(4rem+max(1.5rem,env(safe-area-inset-bottom))+1rem)]";
 
+/** URL 의 date 파라미터가 유효한 YYYY-MM-DD 면 그 값을, 아니면 오늘 날짜를 반환 */
+function initialGameDate(dateParam: string | null): string {
+  if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return dateParam;
+  return formatDate(new Date());
+}
+
+/** URL 의 stadium 파라미터가 유효한 구장 코드면 그 값을, 아니면 null 을 반환 */
+function initialStadium(stadiumParam: string | null): StadiumCode | null {
+  if (stadiumParam && STADIUM_LIST.some((s) => s.code === stadiumParam)) {
+    return stadiumParam as StadiumCode;
+  }
+  return null;
+}
+
 /**
  * 직관 기록 작성 (/record/new)
  * 한 화면 스크롤 폼 — records 테이블에 INSERT 후 /card/[id]로 이동
+ *
+ * 달력 등에서 ?date=YYYY-MM-DD&stadium=<code> 로 진입하면 날짜·구장을 prefill 한다.
+ * (상대팀/홈원정은 prefill 하지 않고 날짜+구장 기반 자동매칭에 맡긴다.)
  */
-export default function NewRecordPage() {
+function NewRecordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [myTeamCode, setMyTeamCode] = useState<TeamCode | null>(null);
-  const [gameDate, setGameDate] = useState(() => formatDate(new Date()));
-  const [stadium, setStadium] = useState<StadiumCode | null>(null);
+  const [gameDate, setGameDate] = useState(() =>
+    initialGameDate(searchParams.get("date"))
+  );
+  const [stadium, setStadium] = useState<StadiumCode | null>(() =>
+    initialStadium(searchParams.get("stadium"))
+  );
   const [opponentTeam, setOpponentTeam] = useState<TeamCode | "">("");
   const [myScore, setMyScore] = useState("");
   const [opponentScore, setOpponentScore] = useState("");
@@ -518,5 +547,22 @@ export default function NewRecordPage() {
     </main>
     <BottomNav variant="glass" />
     </>
+  );
+}
+
+/**
+ * useSearchParams 는 Suspense 경계가 필요(Next App Router)하므로 폼을 감싼다.
+ */
+export default function NewRecordPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="page-gradient flex flex-1 items-center justify-center">
+          <p className="text-sm text-text-tertiary">불러오는 중...</p>
+        </main>
+      }
+    >
+      <NewRecordForm />
+    </Suspense>
   );
 }
