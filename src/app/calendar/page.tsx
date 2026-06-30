@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { BottomNav } from "@/components/layout/bottom-nav";
+import { LineScoreBoard } from "@/components/record/line-score";
 import { TeamMascot } from "@/components/team/team-mascot";
 import { createClient } from "@/lib/supabase";
 import { getStadium } from "@/lib/stadiums";
@@ -12,6 +13,7 @@ import { cn, formatDate, formatKstTime, resultLabel } from "@/lib/utils";
 import type {
   GameResult,
   GameStatus,
+  InningScores,
   KBOScheduleGame,
   Record,
   TeamCode,
@@ -92,6 +94,8 @@ export default function CalendarPage() {
   const [records, setRecords] = useState<Record[]>([]);
   const [myTeam, setMyTeam] = useState<TeamCode | null>(null);
   const [schedule, setSchedule] = useState<KBOScheduleGame[]>([]);
+  const [selectedLineScore, setSelectedLineScore] =
+    useState<InningScores | null>(null);
 
   // 1. 로그인/프로필/기록 로드
   useEffect(() => {
@@ -224,6 +228,43 @@ export default function CalendarPage() {
       ? "시간 미정"
       : formatKstTime(selectedMyGame.game.gameDateTime)
     : null;
+
+  // 선택 경기 종료 + gameId 있을 때만 라인스코어 1회 조회
+  useEffect(() => {
+    setSelectedLineScore(null);
+
+    if (!selectedMyGame) return;
+
+    const { game } = selectedMyGame;
+    if (game.status !== "finished" || !game.gameId) return;
+
+    let cancelled = false;
+    const gameId = game.gameId;
+
+    async function loadLineScore() {
+      try {
+        const res = await fetch(
+          `/api/kbo?linescore=${encodeURIComponent(gameId)}`
+        );
+        const data = res.ok
+          ? ((await res.json()) as InningScores | null)
+          : null;
+        if (!cancelled) setSelectedLineScore(data);
+      } catch {
+        if (!cancelled) setSelectedLineScore(null);
+      }
+    }
+
+    loadLineScore();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    selectedDate,
+    selectedMyGame?.game.gameId,
+    selectedMyGame?.game.status,
+  ]);
 
   return (
     <>
@@ -402,6 +443,16 @@ export default function CalendarPage() {
                       {selectedGameTime ? ` · ${selectedGameTime}` : ""} ·{" "}
                       {statusLabel(selectedMyGame.game.status)}
                     </p>
+
+                    {selectedLineScore ? (
+                      <div className="mt-3">
+                        <LineScoreBoard
+                          scores={selectedLineScore}
+                          homeTeam={selectedMyGame.game.homeTeam}
+                          awayTeam={selectedMyGame.game.awayTeam}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
 
