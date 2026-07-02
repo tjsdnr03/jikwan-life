@@ -27,6 +27,22 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 const TODAY = formatDate(new Date());
 
+/** 직관 결과 배경 원 색 (승/패/무) */
+const RESULT_BG = {
+  win: "#E6F1FB",
+  loss: "#FAECE7",
+  draw: "#F1EFE8",
+} as const;
+
+/** 경기만 있고 직관 기록 없는 날 표식 */
+const GAME_ONLY_DOT = "#B4B2A9";
+
+function resultBgColor(result: GameResult | null | undefined): string {
+  if (result === "win") return RESULT_BG.win;
+  if (result === "loss") return RESULT_BG.loss;
+  return RESULT_BG.draw;
+}
+
 /** 내 팀 경기 (캘린더 셀/상세에서 사용) */
 interface MyGame {
   game: KBOScheduleGame;
@@ -48,17 +64,6 @@ function getFirstDayOfWeek(year: number, month: number): number {
 function formatSelectedLabel(date: string): string {
   const [, month, day] = date.split("-");
   return `${Number(month)}월 ${Number(day)}일`;
-}
-
-function resultDotClass(result: GameResult): string {
-  switch (result) {
-    case "win":
-      return "bg-accent";
-    case "loss":
-      return "bg-text-secondary";
-    case "draw":
-      return "bg-surface-subtle ring-1 ring-[var(--border-subtle)]";
-  }
 }
 
 function statusLabel(status: GameStatus): string {
@@ -363,34 +368,24 @@ export default function CalendarPage() {
                       {day}
                     </span>
 
-                    {/* 내 팀 경기: 상대팀 캐릭터 (홈=accent / 원정=회색 테두리) */}
-                    {myGame ? (
-                      <span className="relative">
-                        <TeamMascot
-                          team={myGame.opponent}
-                          size="sm"
-                          className={cn(
-                            "border-2",
-                            myGame.isHome
-                              ? "border-accent"
-                              : "border-text-secondary"
-                          )}
-                        />
-                        {record?.result ? (
-                          <span
-                            className={cn(
-                              "absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full ring-1 ring-white",
-                              resultDotClass(record.result)
-                            )}
-                          />
-                        ) : null}
-                      </span>
-                    ) : record?.result ? (
+                    {record ? (
                       <span
-                        className={cn(
-                          "mt-1 h-1.5 w-1.5 rounded-full",
-                          resultDotClass(record.result)
-                        )}
+                        className="mt-0.5 flex h-[30px] w-[30px] items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: resultBgColor(record.result),
+                        }}
+                      >
+                        <TeamMascot
+                          team={myGame?.opponent ?? record.opponent_team}
+                          size="sm"
+                          className="h-7 w-7 rounded-full"
+                        />
+                      </span>
+                    ) : myGame ? (
+                      <span
+                        className="mt-1 h-[5px] w-[5px] rounded-full"
+                        style={{ backgroundColor: GAME_ONLY_DOT }}
+                        aria-hidden
                       />
                     ) : null}
                   </button>
@@ -521,27 +516,34 @@ export default function CalendarPage() {
 
           {/* 범례 */}
           <div className="mt-5 space-y-2 text-xs text-text-tertiary">
-            <div className="flex justify-center gap-4">
-              <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-accent" />승
+            <div className="flex flex-wrap justify-center gap-x-4 gap-y-2">
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: RESULT_BG.win }}
+                />
+                승
               </span>
-              <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-text-secondary" />
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: RESULT_BG.loss }}
+                />
                 패
               </span>
-              <span className="flex items-center gap-1">
-                <span className="h-2 w-2 rounded-full bg-surface-subtle ring-1 ring-[var(--border-subtle)]" />
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: RESULT_BG.draw }}
+                />
                 무
               </span>
-            </div>
-            <div className="flex justify-center gap-4">
-              <span className="flex items-center gap-1">
-                <span className="h-3 w-3 rounded-md border-2 border-accent" />
-                홈경기
-              </span>
-              <span className="flex items-center gap-1">
-                <span className="h-3 w-3 rounded-md border-2 border-text-secondary" />
-                원정경기
+              <span className="flex items-center gap-1.5">
+                <span
+                  className="h-[5px] w-[5px] rounded-full"
+                  style={{ backgroundColor: GAME_ONLY_DOT }}
+                />
+                경기 있던 날
               </span>
             </div>
           </div>
